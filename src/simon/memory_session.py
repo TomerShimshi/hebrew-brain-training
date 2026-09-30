@@ -1,5 +1,7 @@
 import random
 
+from simon.storage import new_session_id
+
 DEFAULT_PAIR_COUNT = 10
 
 # Pictures rather than words or colors: matching by picture needs no reading
@@ -28,6 +30,8 @@ class MemoryGameSession:
         cards = SYMBOLS[:pair_count] * 2
         rng.shuffle(cards)
 
+        # stable id for the saved progress record (see storage.upsert_session)
+        self.log_id = new_session_id()
         self.cards: list[str] = cards
         self.matched: set[int] = set()
         self.revealed: list[int] = []  # 0, 1, or 2 indices awaiting resolve()

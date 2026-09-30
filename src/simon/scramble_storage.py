@@ -1,11 +1,11 @@
 from simon.kv_store import KeyValueStore, get_default_store
 from simon.storage import upsert_session
 
-PROGRESS_KEY = "subword_progress_v1"
+PROGRESS_KEY = "scramble_progress_v1"
 _EMPTY_PROGRESS = {"sessions": []}
 
 
-class SubWordProgressStore:
+class ScrambleProgressStore:
     def __init__(self, store: KeyValueStore | None = None) -> None:
         self._store = store or get_default_store()
         self._data = self._store.load(PROGRESS_KEY, _EMPTY_PROGRESS)
@@ -16,19 +16,21 @@ class SubWordProgressStore:
     def save_session(
         self,
         session_id: str,
-        base_words: list[str],
-        words_found_count: int,
+        category: str,
+        words_shown: list[str],
+        words_solved_count: int,
         hints_used: int,
+        revealed_count: int,
     ) -> None:
-        """Saved after every word found (see upsert_session), so leaving
-        mid-game keeps the words found so far."""
         upsert_session(
             self._data["sessions"],
             session_id,
             {
-                "base_words": list(base_words),
-                "words_found_count": words_found_count,
+                "category": category,
+                "words_shown": list(words_shown),
+                "words_solved_count": words_solved_count,
                 "hints_used": hints_used,
+                "revealed_count": revealed_count,
             },
         )
         self._save()
@@ -40,6 +42,6 @@ class SubWordProgressStore:
     def recent_sessions(self, n: int = 10) -> list[dict]:
         return self._data["sessions"][-n:]
 
-    def best_words_found_count(self) -> int | None:
-        counts = [s["words_found_count"] for s in self._data["sessions"]]
+    def best_words_solved_count(self) -> int | None:
+        counts = [s["words_solved_count"] for s in self._data["sessions"]]
         return max(counts, default=None)

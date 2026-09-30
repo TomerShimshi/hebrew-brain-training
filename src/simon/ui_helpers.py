@@ -6,13 +6,14 @@ TEXT_SECONDARY = "#5B6472"
 ACCENT = ft.Colors.BLUE_600
 
 # Each game gets its own identity (accent color + soft tint for
-# backgrounds/chips + an emoji icon) so the three games are instantly
+# backgrounds/chips + an emoji icon) so the games are instantly
 # distinguishable at a glance on the home hub and inside each game's own
 # screens -- useful recognition support independent of reading the title.
 GAME_THEMES = {
     "simon": {"accent": "#3B5BDB", "light": "#E7EBFC", "icon": "\U0001f3ae"},
     "memory": {"accent": "#0F9D74", "light": "#E1F6EE", "icon": "\U0001f0cf"},
     "subword": {"accent": "#E8590C", "light": "#FDECE1", "icon": "\U0001f524"},
+    "scramble": {"accent": "#7048E8", "light": "#EFEAFD", "icon": "\U0001f500"},
 }
 
 # Unlit / lit pairs per pad -- the lit shade is a brightened version of the

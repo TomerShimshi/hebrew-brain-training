@@ -72,6 +72,7 @@ def build_progress_view(page: ft.Page, state: AppState) -> ft.View:
     simon_sessions = state.progress.recent_sessions(n=SESSIONS_SHOWN)
     memory_sessions = state.memory_progress.recent_sessions(n=SESSIONS_SHOWN)
     subword_sessions = state.subword_progress.recent_sessions(n=SESSIONS_SHOWN)
+    scramble_sessions = state.scramble_progress.recent_sessions(n=SESSIONS_SHOWN)
 
     async def go_home(_: ft.ControlEvent) -> None:
         await page.push_route("/")
@@ -113,6 +114,15 @@ def build_progress_view(page: ft.Page, state: AppState) -> ft.View:
                         subword_sessions,
                         "words_found_count",
                         "מילים שנמצאו בכל משחק (גבוה יותר = טוב יותר)",
+                        higher_is_better=True,
+                    ),
+                    ft.Container(height=16),
+                    _game_trend_card(
+                        "scramble",
+                        "מילים מבולגנות",
+                        scramble_sessions,
+                        "words_solved_count",
+                        "מילים שסודרו בכל משחק (גבוה יותר = טוב יותר)",
                         higher_is_better=True,
                     ),
                     ft.Container(height=24),

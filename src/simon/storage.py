@@ -20,7 +20,7 @@ class ProgressStore:
     def _save(self) -> None:
         self._store.save(PROGRESS_KEY, self._data)
 
-    def record_session(
+    def save_session(
         self,
         session_id: str,
         best_length: int,
@@ -28,18 +28,17 @@ class ProgressStore:
         rounds_correct: int,
         step_ms: int,
     ) -> None:
-        """Persisted once at session end -- unlike a long multi-scene practice
-        session, a Simon session is a short handful of rounds, so there is
-        little to lose by saving here rather than per-round."""
-        self._data["sessions"].append(
+        """Saved after every round (see upsert_session), so leaving
+        mid-game keeps the rounds played so far."""
+        upsert_session(
+            self._data["sessions"],
+            session_id,
             {
-                "id": session_id,
-                "date": datetime.now(timezone.utc).isoformat(),
                 "best_length": best_length,
                 "rounds_played": rounds_played,
                 "rounds_correct": rounds_correct,
                 "step_ms": step_ms,
-            }
+            },
         )
         self._save()
 
@@ -82,3 +81,16 @@ class ProgressStore:
 
 def new_session_id() -> str:
     return str(uuid.uuid4())
+
+
+def upsert_session(sessions: list[dict], session_id: str, fields: dict) -> None:
+    """Adds the session's record the first time it's saved and updates it
+    in place after that. Every game saves after each bit of progress (a
+    round, a matched pair, a found word), so progress survives the player
+    leaving mid-game -- and because a session keeps one id throughout, it
+    is never counted twice."""
+    existing = next((s for s in sessions if s["id"] == session_id), None)
+    if existing is None:
+        sessions.append({"id": session_id, "date": datetime.now(timezone.utc).isoformat(), **fields})
+    else:
+        existing.update(fields)

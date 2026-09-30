@@ -1,6 +1,7 @@
 import random
 
 from simon.models import COLORS
+from simon.storage import new_session_id
 
 MAX_SEQUENCE_LENGTH = 20
 MISSES_ALLOWED_PER_LENGTH = 2  # a single wrong tap gives one visible retry at
@@ -22,6 +23,8 @@ class SimonSession:
         step_ms: int = 900,
         rng: random.Random | None = None,
     ) -> None:
+        # stable id for the saved progress record (see storage.upsert_session)
+        self.log_id = new_session_id()
         self._rng = rng or random.Random()
         self.step_ms = step_ms
         self.sequence: list[int] = [

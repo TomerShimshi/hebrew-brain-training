@@ -5,7 +5,6 @@ import flet as ft
 
 from simon.app_state import AppState
 from simon.memory_session import DEFAULT_PAIR_COUNT, MemoryGameSession
-from simon.storage import new_session_id
 from simon.ui_helpers import GAME_THEMES, chip_button, rtl_text, soft_shadow
 
 THEME = GAME_THEMES["memory"]
@@ -28,7 +27,6 @@ def build_memory_game_view(page: ft.Page, state: AppState) -> ft.View:
         session = MemoryGameSession(pair_count=DEFAULT_PAIR_COUNT)
         state.memory_session = session
 
-    session_log_id = new_session_id()
     lock = {"busy": False}
 
     status_label = rtl_text("מצא את הזוגות התואמים", size=22, weight=ft.FontWeight.BOLD)
@@ -52,13 +50,17 @@ def build_memory_game_view(page: ft.Page, state: AppState) -> ft.View:
             render_card(i)
         moves_label.value = f"צעדים: {session.moves}"
 
-    async def finish_session() -> None:
-        state.memory_progress.record_session(
-            session_log_id,
+    def save_progress() -> None:
+        state.memory_progress.save_session(
+            session.log_id,
             pair_count=session.pair_count,
             moves=session.moves,
             mismatches=session.mismatches,
+            completed=session.is_complete,
         )
+
+    async def finish_session() -> None:
+        save_progress()
         await page.push_route("/memory/summary")
 
     async def handle_card_tap(index: int) -> None:
@@ -73,6 +75,8 @@ def build_memory_game_view(page: ft.Page, state: AppState) -> ft.View:
 
         lock["busy"] = True
         matched = session.resolve()
+        if matched:
+            save_progress()
         await asyncio.sleep(MATCH_PAUSE_S if matched else MISMATCH_PAUSE_S)
         render_all()
         page.update()

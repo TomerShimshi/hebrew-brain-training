@@ -2,6 +2,7 @@ import enum
 import random
 
 from simon.hebrew_letters import to_base_form, to_display_form
+from simon.storage import new_session_id
 
 MIN_ATTEMPT_LENGTH = 2
 
@@ -36,6 +37,8 @@ class SubWordSession:
         rng: random.Random | None = None,
         base_word: str | None = None,
     ) -> None:
+        # stable id for the saved progress record (see storage.upsert_session)
+        self.log_id = new_session_id()
         self._bank = bank
         self._clues = clues
         self._rng = rng or random.Random()

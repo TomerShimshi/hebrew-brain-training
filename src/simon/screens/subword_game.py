@@ -1,7 +1,6 @@
 import flet as ft
 
 from simon.app_state import AppState
-from simon.storage import new_session_id
 from simon.subword_session import CheckResult, SubWordSession
 from simon.ui_helpers import GAME_THEMES, chip_button, primary_button, rtl_text, soft_shadow
 
@@ -23,7 +22,6 @@ def build_subword_game_view(page: ft.Page, state: AppState) -> ft.View:
         session = SubWordSession(state.subword_bank, state.subword_clues)
         state.subword_session = session
 
-    session_log_id = new_session_id()
 
     base_word_label = rtl_text("", size=32, weight=ft.FontWeight.BOLD)
     attempt_label = rtl_text("", size=28)
@@ -81,6 +79,8 @@ def build_subword_game_view(page: ft.Page, state: AppState) -> ft.View:
     async def check(_: ft.ControlEvent) -> None:
         result = session.check_attempt()
         feedback_label.value = FEEDBACK_TEXT[result]
+        if result == CheckResult.FOUND:
+            save_progress()
         render_all()
         page.update()
 
@@ -102,6 +102,8 @@ def build_subword_game_view(page: ft.Page, state: AppState) -> ft.View:
 
     async def reveal(_: ft.ControlEvent) -> None:
         revealed = session.reveal_word()
+        if revealed:
+            save_progress()
         feedback_label.value = f'המילה הייתה: "{revealed}"' if revealed else "כבר מצאת את כל המילים!"
         render_all()
         page.update()
@@ -113,13 +115,16 @@ def build_subword_game_view(page: ft.Page, state: AppState) -> ft.View:
         render_all()
         page.update()
 
-    async def finish_session(_: ft.ControlEvent) -> None:
-        state.subword_progress.record_session(
-            session_log_id,
+    def save_progress() -> None:
+        state.subword_progress.save_session(
+            session.log_id,
             base_words=session.base_words_shown,
             words_found_count=session.total_found_count,
             hints_used=session.hints_used,
         )
+
+    async def finish_session(_: ft.ControlEvent) -> None:
+        save_progress()
         await page.push_route("/subword/summary")
 
     async def exit_to_home(_: ft.ControlEvent) -> None:

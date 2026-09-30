@@ -6,7 +6,6 @@ from simon.app_state import AppState
 from simon.audio import SoundBoard
 from simon.models import COLORS
 from simon.session_manager import SimonSession
-from simon.storage import new_session_id
 from simon.ui_helpers import GAME_THEMES, PAD_COLORS, PAD_COLORS_LIT, chip_button, rtl_text, soft_shadow
 
 THEME = GAME_THEMES["simon"]
@@ -31,7 +30,6 @@ def build_simon_game_view(page: ft.Page, state: AppState) -> ft.View:
         state.session = session
 
     sound = SoundBoard()
-    session_log_id = new_session_id()
     lock = {"busy": True}  # pads ignore taps until the sequence finishes playing
     player_input: list[int] = []
 
@@ -89,14 +87,17 @@ def build_simon_game_view(page: ft.Page, state: AppState) -> ft.View:
         page.update()
         lock["busy"] = False
 
-    async def finish_session() -> None:
-        state.progress.record_session(
-            session_log_id,
+    def save_progress() -> None:
+        state.progress.save_session(
+            session.log_id,
             best_length=session.best_length,
             rounds_played=session.rounds_played,
             rounds_correct=session.rounds_correct,
             step_ms=session.step_ms,
         )
+
+    async def finish_session() -> None:
+        save_progress()
         await page.push_route("/simon/summary")
 
     async def handle_pad_tap(index: int) -> None:
@@ -110,6 +111,7 @@ def build_simon_game_view(page: ft.Page, state: AppState) -> ft.View:
         if session.sequence[step] != index:
             _play_sound(sound.play_error())
             session.record_round(False)
+            save_progress()
             if session.finished:
                 status_label.value = "הפעם לא הצלחנו..."
                 page.update()
@@ -126,6 +128,7 @@ def build_simon_game_view(page: ft.Page, state: AppState) -> ft.View:
             status_label.value = "מצוין!"
             page.update()
             session.record_round(True)
+            save_progress()
             await asyncio.sleep(INTER_ROUND_PAUSE_S)
             if session.finished:
                 await finish_session()

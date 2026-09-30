@@ -4,6 +4,8 @@ from simon.engagement_storage import EngagementStore
 from simon.kv_store import NamespacedKeyValueStore, get_default_store
 from simon.memory_session import MemoryGameSession
 from simon.memory_storage import MemoryProgressStore
+from simon.scramble_session import ScrambleSession
+from simon.scramble_storage import ScrambleProgressStore
 from simon.session_manager import SimonSession
 from simon.storage import ProgressStore
 from simon.subword_session import SubWordSession
@@ -14,6 +16,7 @@ from simon.subword_storage import SubWordProgressStore
 class AppState:
     subword_bank: dict[str, list[str]]
     subword_clues: dict[str, str]
+    scramble_categories: dict[str, dict]
 
     # None until a profile is chosen on the picker screen -- main.py's
     # routing gates every other screen on `profile` being set, so by the
@@ -22,11 +25,13 @@ class AppState:
     progress: ProgressStore | None = None
     memory_progress: MemoryProgressStore | None = None
     subword_progress: SubWordProgressStore | None = None
+    scramble_progress: ScrambleProgressStore | None = None
     engagement: EngagementStore | None = None
 
     session: SimonSession | None = None
     memory_session: MemoryGameSession | None = None
     subword_session: SubWordSession | None = None
+    scramble_session: ScrambleSession | None = None
 
     def activate_profile(self, profile: str) -> None:
         """Gives this profile its own namespaced view of the storage
@@ -37,5 +42,6 @@ class AppState:
         self.progress = ProgressStore(store=store)
         self.memory_progress = MemoryProgressStore(store=store)
         self.subword_progress = SubWordProgressStore(store=store)
+        self.scramble_progress = ScrambleProgressStore(store=store)
         self.engagement = EngagementStore(store=store)
         self.engagement.record_visit()
