@@ -73,6 +73,7 @@ def build_progress_view(page: ft.Page, state: AppState) -> ft.View:
     memory_sessions = state.memory_progress.recent_sessions(n=SESSIONS_SHOWN)
     subword_sessions = state.subword_progress.recent_sessions(n=SESSIONS_SHOWN)
     scramble_sessions = state.scramble_progress.recent_sessions(n=SESSIONS_SHOWN)
+    change_word_sessions = state.change_word_progress.recent_sessions(n=SESSIONS_SHOWN)
 
     async def go_home(_: ft.ControlEvent) -> None:
         await page.push_route("/")
@@ -123,6 +124,15 @@ def build_progress_view(page: ft.Page, state: AppState) -> ft.View:
                         scramble_sessions,
                         "words_solved_count",
                         "מילים שסודרו בכל משחק (גבוה יותר = טוב יותר)",
+                        higher_is_better=True,
+                    ),
+                    ft.Container(height=16),
+                    _game_trend_card(
+                        "change_word",
+                        "שינוי מילים",
+                        change_word_sessions,
+                        "changes_solved",
+                        "מילים ששונו בכל משחק (גבוה יותר = טוב יותר)",
                         higher_is_better=True,
                     ),
                     ft.Container(height=24),

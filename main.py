@@ -6,6 +6,9 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 import flet as ft
 
 from simon.app_state import AppState
+from simon.change_word_bank import load_pairs
+from simon.screens.change_word_game import build_change_word_game_view
+from simon.screens.change_word_summary import build_change_word_summary_view
 from simon.screens.home import build_home_view
 from simon.screens.memory_game import build_memory_game_view
 from simon.screens.memory_summary import build_memory_summary_view
@@ -34,6 +37,8 @@ ROUTE_BUILDERS = {
     "/scramble": build_scramble_categories_view,
     "/scramble/play": build_scramble_game_view,
     "/scramble/summary": build_scramble_summary_view,
+    "/change": build_change_word_game_view,
+    "/change/summary": build_change_word_summary_view,
     "/progress": build_progress_view,
 }
 
@@ -50,6 +55,7 @@ def main(page: ft.Page) -> None:
         subword_bank=load_bank(),
         subword_clues=load_clues(),
         scramble_categories=load_categories(),
+        change_word_pairs=load_pairs(),
     )
 
     def render_current_route(*_args) -> None:

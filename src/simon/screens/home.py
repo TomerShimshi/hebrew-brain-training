@@ -35,6 +35,13 @@ def _scramble_caption(state: AppState) -> str:
     return f"בפעם הקודמת: {last['words_solved_count']} מילים ({last['category']})"
 
 
+def _change_word_caption(state: AppState) -> str:
+    last = state.change_word_progress.last_session()
+    if last is None:
+        return "עדיין לא שיחקת"
+    return f"בפעם הקודמת: שינית {last['changes_solved']} מילים"
+
+
 def _game_card(theme_key: str, title: str, subtitle: str, caption: str, on_click) -> ft.Container:
     theme = GAME_THEMES[theme_key]
     icon_bubble = ft.Container(
@@ -138,6 +145,10 @@ def build_home_view(page: ft.Page, state: AppState) -> ft.View:
         state.scramble_session = None  # /scramble opens on the category picker
         await page.push_route("/scramble")
 
+    async def start_change_word(_: ft.ControlEvent) -> None:
+        state.change_word_session = None  # let /change build a fresh session
+        await page.push_route("/change")
+
     async def go_progress(_: ft.ControlEvent) -> None:
         await page.push_route("/progress")
 
@@ -182,6 +193,14 @@ def build_home_view(page: ft.Page, state: AppState) -> ft.View:
                         "סדרו את האותיות למילה",
                         _scramble_caption(state),
                         start_scramble,
+                    ),
+                    ft.Container(height=16),
+                    _game_card(
+                        "change_word",
+                        "שינוי מילים",
+                        "אותן אותיות, מילה חדשה",
+                        _change_word_caption(state),
+                        start_change_word,
                     ),
                     ft.Container(height=20),
                     chip_button("\U0001f4ca ההתקדמות שלי", go_progress, ACCENT),

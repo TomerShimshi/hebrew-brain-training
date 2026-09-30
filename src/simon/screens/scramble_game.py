@@ -1,16 +1,14 @@
 import flet as ft
 
 from simon.app_state import AppState
-from simon.scramble_session import GuessResult
-from simon.ui_helpers import GAME_THEMES, chip_button, primary_button, rtl_text, soft_shadow
+from simon.letter_puzzle import GuessResult
+from simon.screens.letter_board import LetterBoard
+from simon.ui_helpers import GAME_THEMES, chip_button, primary_button, rtl_text
 
 THEME = GAME_THEMES["scramble"]
-TILE_COLOR = THEME["accent"]
 TILE_USED_COLOR = "#C9BCF5"
-SLOT_EMPTY_COLOR = "#FFFFFF"
-SLOT_SOLVED_COLOR = "#D3F9D8"
-SLOT_REVEALED_COLOR = THEME["light"]
 FEEDBACK_SOLVED = "מצוין! סידרת את המילה \U0001f389"
+FEEDBACK_WRONG = "כמעט! נסו לסדר אחרת (אפשר ללחוץ על \"ביטול\")"
 
 
 def build_scramble_game_view(page: ft.Page, state: AppState) -> ft.View:
@@ -31,96 +29,48 @@ def build_scramble_game_view(page: ft.Page, state: AppState) -> ft.View:
         padding=ft.Padding(16, 10, 16, 10),
         width=330,
     )
-    slot_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, spacing=6, wrap=True, run_spacing=6)
-    tile_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, spacing=10, wrap=True, run_spacing=10)
-    tiles: dict[int, ft.Container] = {}
-    slots: list[ft.Container] = []
-
-    def build_tile(index: int) -> ft.Container:
-        async def on_click(_: ft.ControlEvent) -> None:
-            session.tap_tile(index)
-            auto_check()
-            render_all()
-            page.update()
-
-        tile = ft.Container(
-            content=rtl_text(session.tiles[index], size=30, color="#FFFFFF"),
-            bgcolor=TILE_COLOR,
-            border_radius=14,
-            width=60,
-            height=60,
-            alignment=ft.Alignment(0, 0),
-            on_click=on_click,
-            animate=ft.Animation(150, ft.AnimationCurve.EASE_OUT),
-            shadow=soft_shadow(TILE_COLOR, opacity=0.3, blur=8),
-        )
-        tiles[index] = tile
-        return tile
-
-    def build_slot() -> ft.Container:
-        slot = ft.Container(
-            content=rtl_text("", size=28, weight=ft.FontWeight.BOLD),
-            bgcolor=SLOT_EMPTY_COLOR,
-            border=ft.Border.all(2, THEME["accent"]),
-            border_radius=10,
-            width=48,
-            height=56,
-            alignment=ft.Alignment(0, 0),
-        )
-        slots.append(slot)
-        return slot
-
-    def rebuild_word() -> None:
-        tiles.clear()
-        slots.clear()
-        tile_row.controls = [build_tile(i) for i in range(len(session.tiles))]
-        slot_row.controls = [build_slot() for _ in session.tiles]
 
     def render_all() -> None:
         progress_label.value = f"{icon} {session.category} · מילה {session.position} מתוך {session.total_words}"
-        for i, tile in tiles.items():
-            tile.bgcolor = TILE_USED_COLOR if i in session.current_attempt else TILE_COLOR
-        for slot, letter in zip(slots, session.slot_letters()):
-            slot.content.value = letter
-            if not session.word_done:
-                slot.bgcolor = SLOT_EMPTY_COLOR
-            else:
-                slot.bgcolor = SLOT_REVEALED_COLOR if session.word_revealed else SLOT_SOLVED_COLOR
+        board.render()
         # once asked for, the clue stays up for the rest of the word so the
         # player can keep glancing back at it while arranging letters
         clue_box.visible = session.clue_shown
-        playing_controls.visible = not session.word_done
-        next_button.visible = session.word_done
+        playing_controls.visible = not session.puzzle.done
+        next_button.visible = session.puzzle.done
         next_button.content.value = "המילה הבאה" if session.has_next_word else "לסיכום"
 
-    def auto_check() -> None:
-        # the answer's length is visible as slots, so checking the moment
-        # the last slot fills saves a button press without any surprise
-        result = session.check_attempt()
+    def show_result(result: GuessResult) -> None:
         if result == GuessResult.CORRECT:
             feedback_label.value = FEEDBACK_SOLVED
             save_progress()
         elif result == GuessResult.WRONG:
-            feedback_label.value = "כמעט! נסו לסדר אחרת (אפשר ללחוץ על \"ביטול\")"
+            feedback_label.value = FEEDBACK_WRONG
         else:
             feedback_label.value = ""
 
+    def on_tile_tap(result: GuessResult) -> None:
+        show_result(result)
+        render_all()
+
+    board = LetterBoard(page, THEME["accent"], THEME["light"], TILE_USED_COLOR, on_tile_tap)
+
     async def undo(_: ft.ControlEvent) -> None:
-        session.undo_last()
+        session.puzzle.undo_last()
         feedback_label.value = ""
         render_all()
         page.update()
 
     async def clear(_: ft.ControlEvent) -> None:
-        session.clear_attempt()
+        session.puzzle.clear_attempt()
         feedback_label.value = ""
         render_all()
         page.update()
 
     async def hint(_: ft.ControlEvent) -> None:
-        session.hint_next_letter()
-        auto_check()
-        if not session.word_done:
+        session.puzzle.hint_next_letter()
+        show_result(session.puzzle.check_attempt())
+        if not session.puzzle.done:
             feedback_label.value = "הוספנו לכם את האות הבאה"
         render_all()
         page.update()
@@ -131,7 +81,7 @@ def build_scramble_game_view(page: ft.Page, state: AppState) -> ft.View:
         page.update()
 
     async def reveal(_: ft.ControlEvent) -> None:
-        session.reveal_word()
+        session.puzzle.reveal()
         feedback_label.value = f'המילה היא: "{session.answer}"'
         render_all()
         page.update()
@@ -155,7 +105,7 @@ def build_scramble_game_view(page: ft.Page, state: AppState) -> ft.View:
             await finish_session(e)
             return
         session.next_word()
-        rebuild_word()
+        board.set_puzzle(session.puzzle)
         feedback_label.value = ""
         render_all()
         page.update()
@@ -189,7 +139,7 @@ def build_scramble_game_view(page: ft.Page, state: AppState) -> ft.View:
     )
     next_button = primary_button("המילה הבאה", next_word, THEME["accent"])
 
-    rebuild_word()
+    board.set_puzzle(session.puzzle)
     render_all()
 
     return ft.View(
@@ -208,8 +158,7 @@ def build_scramble_game_view(page: ft.Page, state: AppState) -> ft.View:
                     progress_label,
                     rtl_text("סדרו את האותיות למילה", size=18),
                     clue_box,
-                    ft.Container(content=slot_row, padding=ft.Padding(0, 12, 0, 4)),
-                    ft.Container(content=tile_row, padding=16),
+                    board.control,
                     feedback_label,
                     playing_controls,
                     next_button,

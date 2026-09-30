@@ -14,6 +14,7 @@ GAME_THEMES = {
     "memory": {"accent": "#0F9D74", "light": "#E1F6EE", "icon": "\U0001f0cf"},
     "subword": {"accent": "#E8590C", "light": "#FDECE1", "icon": "\U0001f524"},
     "scramble": {"accent": "#7048E8", "light": "#EFEAFD", "icon": "\U0001f500"},
+    "change_word": {"accent": "#D6336C", "light": "#FCE4EC", "icon": "\U0001f504"},
 }
 
 # Unlit / lit pairs per pad -- the lit shade is a brightened version of the
