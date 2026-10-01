@@ -99,6 +99,34 @@ def bar_chart(values: list[float], color: str, max_bar_height: float = 90, bar_w
     )
 
 
+def content_width(page: ft.Page, max_width: float = 400) -> float:
+    """Width for a full-width block (keyboard, riddle card): the screen's
+    width minus the page margins, capped so it doesn't stretch across a
+    wide desktop browser. Fixed widths wider than a small phone (~360px)
+    used to push parts of the screen out of view."""
+    screen = page.width or page.window.width or max_width
+    return max(260, min(max_width, screen - 24))
+
+
+def game_header(title: str, color: str, back_label: str, on_back, on_finish=None) -> ft.Row:
+    """The top bar of a game screen: back button, title, and an optional
+    "finish" button. The title takes whatever width is left between the
+    buttons (wrapping onto a second line if it must), so on a narrow phone
+    nothing is pushed off-screen -- a fixed-width SPACE_BETWEEN row used
+    to clip the back button."""
+    controls: list[ft.Control] = [
+        chip_button(back_label, on_back, color),
+        ft.Container(
+            content=rtl_text(title, size=18, weight=ft.FontWeight.BOLD),
+            expand=True,
+            alignment=ft.Alignment(0, 0),
+        ),
+    ]
+    if on_finish is not None:
+        controls.append(chip_button("סיום", on_finish, color))
+    return ft.Row(controls, spacing=6, vertical_alignment=ft.CrossAxisAlignment.CENTER)
+
+
 def chip_button(label: str, on_click, color: str = ACCENT) -> ft.TextButton:
     """A small pill-shaped secondary action (clear/undo/hint-style buttons)
     tinted with the current game's accent color, instead of a plain
@@ -110,6 +138,6 @@ def chip_button(label: str, on_click, color: str = ACCENT) -> ft.TextButton:
         style=ft.ButtonStyle(
             bgcolor=ft.Colors.with_opacity(0.10, color),
             shape=ft.RoundedRectangleBorder(radius=20),
-            padding=ft.Padding(16, 10, 16, 10),
+            padding=ft.Padding(12, 10, 12, 10),
         ),
     )

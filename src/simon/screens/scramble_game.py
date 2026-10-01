@@ -3,7 +3,7 @@ import flet as ft
 from simon.app_state import AppState
 from simon.letter_puzzle import GuessResult
 from simon.screens.letter_board import LetterBoard
-from simon.ui_helpers import GAME_THEMES, chip_button, primary_button, rtl_text
+from simon.ui_helpers import GAME_THEMES, chip_button, game_header, primary_button, rtl_text
 
 THEME = GAME_THEMES["scramble"]
 TILE_USED_COLOR = "#C9BCF5"
@@ -147,14 +147,7 @@ def build_scramble_game_view(page: ft.Page, state: AppState) -> ft.View:
         controls=[
             ft.Column(
                 [
-                    ft.Row(
-                        [
-                            chip_button("נושאים", exit_to_categories, THEME["accent"]),
-                            rtl_text(f"מילים מבולגנות {THEME['icon']}", size=20, weight=ft.FontWeight.BOLD),
-                            chip_button("סיום", finish_session, THEME["accent"]),
-                        ],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    ),
+                    game_header(f"מילים מבולגנות {THEME['icon']}", THEME["accent"], "נושאים", exit_to_categories, finish_session),
                     progress_label,
                     rtl_text("סדרו את האותיות למילה", size=18),
                     clue_box,

@@ -2,7 +2,7 @@ import flet as ft
 
 from simon.app_state import AppState
 from simon.subword_session import CheckResult, SubWordSession
-from simon.ui_helpers import GAME_THEMES, chip_button, primary_button, rtl_text, soft_shadow
+from simon.ui_helpers import GAME_THEMES, chip_button, game_header, primary_button, rtl_text, soft_shadow
 
 THEME = GAME_THEMES["subword"]
 TILE_COLOR = THEME["accent"]
@@ -138,14 +138,7 @@ def build_subword_game_view(page: ft.Page, state: AppState) -> ft.View:
         controls=[
             ft.Column(
                 [
-                    ft.Row(
-                        [
-                            chip_button("חזרה לתפריט", exit_to_home, THEME["accent"]),
-                            rtl_text(f"בניית מילים {THEME['icon']}", size=20, weight=ft.FontWeight.BOLD),
-                            chip_button("סיום", finish_session, THEME["accent"]),
-                        ],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    ),
+                    game_header(f"בניית מילים {THEME['icon']}", THEME["accent"], "חזרה לתפריט", exit_to_home, finish_session),
                     rtl_text("בנו מילים מהאותיות", size=18),
                     base_word_label,
                     ft.Container(content=tile_row, padding=16),

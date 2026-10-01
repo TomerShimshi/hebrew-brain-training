@@ -4,7 +4,7 @@ from simon.app_state import AppState
 from simon.change_word_session import ChangeWordSession
 from simon.letter_puzzle import GuessResult
 from simon.screens.hebrew_keyboard import hebrew_keyboard
-from simon.ui_helpers import GAME_THEMES, TEXT_SECONDARY, chip_button, primary_button, rtl_text
+from simon.ui_helpers import GAME_THEMES, TEXT_SECONDARY, chip_button, content_width, game_header, primary_button, rtl_text
 
 THEME = GAME_THEMES["change_word"]
 SLOT_EMPTY_COLOR = "#FFFFFF"
@@ -18,12 +18,13 @@ def build_change_word_game_view(page: ft.Page, state: AppState) -> ft.View:
         session = ChangeWordSession(state.change_word_pairs)
         state.change_word_session = session
 
+    width = content_width(page)
     progress_label = rtl_text("", size=16)
     # The whole riddle -- 'change "<clue 1>" into "<clue 2>"' -- is shown
     # from the start so the player knows where both stages are heading;
     # the line for the current stage is highlighted.
     riddle_lines = [
-        ft.Container(content=rtl_text("", size=20), border_radius=12, padding=ft.Padding(12, 8, 12, 8), width=330)
+        ft.Container(content=rtl_text("", size=19), border_radius=12, padding=ft.Padding(10, 6, 10, 6), width=width - 16)
         for _ in range(2)
     ]
     riddle_box = ft.Container(
@@ -31,8 +32,8 @@ def build_change_word_game_view(page: ft.Page, state: AppState) -> ft.View:
         bgcolor="#FFFFFF",
         border=ft.Border.all(2, THEME["light"]),
         border_radius=16,
-        padding=8,
-        width=350,
+        padding=6,
+        width=width,
     )
     stage_label = rtl_text("", size=18, weight=ft.FontWeight.BOLD)
     extra_clue_label = rtl_text("", size=17, color=THEME["accent"])
@@ -46,8 +47,8 @@ def build_change_word_game_view(page: ft.Page, state: AppState) -> ft.View:
                 bgcolor=SLOT_EMPTY_COLOR,
                 border=ft.Border.all(2, THEME["accent"]),
                 border_radius=10,
-                width=48,
-                height=56,
+                width=46,
+                height=50,
                 alignment=ft.Alignment(0, 0),
             )
             for _ in range(session.puzzle.length)
@@ -173,7 +174,7 @@ def build_change_word_game_view(page: ft.Page, state: AppState) -> ft.View:
 
     playing_controls = ft.Column(
         [
-            hebrew_keyboard(on_letter, on_backspace, THEME["accent"]),
+            hebrew_keyboard(on_letter, on_backspace, THEME["accent"], width),
             ft.Container(height=4),
             ft.Row(
                 [
@@ -199,25 +200,18 @@ def build_change_word_game_view(page: ft.Page, state: AppState) -> ft.View:
         controls=[
             ft.Column(
                 [
-                    ft.Row(
-                        [
-                            chip_button("חזרה לתפריט", exit_to_home, THEME["accent"]),
-                            rtl_text(f"שינוי מילים {THEME['icon']}", size=20, weight=ft.FontWeight.BOLD),
-                            chip_button("סיום", finish_session, THEME["accent"]),
-                        ],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    ),
+                    game_header(f"שינוי מילים {THEME['icon']}", THEME["accent"], "חזרה לתפריט", exit_to_home, finish_session),
                     progress_label,
                     riddle_box,
                     stage_label,
                     extra_clue_label,
-                    ft.Container(content=slot_row, padding=ft.Padding(0, 8, 0, 4)),
+                    ft.Container(content=slot_row, padding=ft.Padding(0, 4, 0, 0)),
                     feedback_label,
                     playing_controls,
                     next_button,
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=10,
+                spacing=8,
                 scroll=ft.ScrollMode.AUTO,
                 expand=True,
             )

@@ -5,7 +5,7 @@ import flet as ft
 
 from simon.app_state import AppState
 from simon.memory_session import DEFAULT_PAIR_COUNT, MemoryGameSession
-from simon.ui_helpers import GAME_THEMES, chip_button, rtl_text, soft_shadow
+from simon.ui_helpers import GAME_THEMES, chip_button, game_header, rtl_text, soft_shadow
 
 THEME = GAME_THEMES["memory"]
 
@@ -123,14 +123,7 @@ def build_memory_game_view(page: ft.Page, state: AppState) -> ft.View:
         controls=[
             ft.Column(
                 [
-                    ft.Row(
-                        [
-                            chip_button("חזרה לתפריט", exit_to_home, THEME["accent"]),
-                            rtl_text(f"זיכרון קלפים {THEME['icon']}", size=20, weight=ft.FontWeight.BOLD),
-                            ft.Container(width=110),
-                        ],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    ),
+                    game_header(f"זיכרון קלפים {THEME['icon']}", THEME["accent"], "חזרה לתפריט", exit_to_home),
                     status_label,
                     moves_label,
                     ft.Container(content=grid, expand=True, padding=16),

@@ -6,7 +6,7 @@ from simon.app_state import AppState
 from simon.audio import SoundBoard
 from simon.models import COLORS
 from simon.session_manager import SimonSession
-from simon.ui_helpers import GAME_THEMES, PAD_COLORS, PAD_COLORS_LIT, chip_button, rtl_text, soft_shadow
+from simon.ui_helpers import GAME_THEMES, PAD_COLORS, PAD_COLORS_LIT, chip_button, game_header, rtl_text, soft_shadow
 
 THEME = GAME_THEMES["simon"]
 
@@ -156,14 +156,7 @@ def build_simon_game_view(page: ft.Page, state: AppState) -> ft.View:
         controls=[
             ft.Column(
                 [
-                    ft.Row(
-                        [
-                            chip_button("חזרה לתפריט", exit_to_home, THEME["accent"]),
-                            rtl_text(f"סיימון {THEME['icon']}", size=20, weight=ft.FontWeight.BOLD),
-                            chip_button("סיום", end_session_now, THEME["accent"]),
-                        ],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    ),
+                    game_header(f"סיימון {THEME['icon']}", THEME["accent"], "חזרה לתפריט", exit_to_home, end_session_now),
                     status_label,
                     length_label,
                     ft.Container(content=board, expand=True, padding=16),
