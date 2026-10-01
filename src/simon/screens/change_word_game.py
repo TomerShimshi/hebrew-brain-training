@@ -15,7 +15,9 @@ FEEDBACK_WRONG = "כמעט! נסו מילה אחרת (אפשר למחוק עם �
 def build_change_word_game_view(page: ft.Page, state: AppState) -> ft.View:
     session = state.change_word_session
     if session is None:
-        session = ChangeWordSession(state.change_word_pairs)
+        session = ChangeWordSession(
+            state.change_word_pairs, seen_history=state.change_word_progress.seen_history()
+        )
         state.change_word_session = session
 
     width = content_width(page)

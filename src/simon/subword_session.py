@@ -1,6 +1,7 @@
 import enum
 import random
 
+from simon.freshness import freshness_order
 from simon.hebrew_letters import to_base_form, to_display_form
 from simon.storage import new_session_id
 
@@ -14,9 +15,17 @@ class CheckResult(enum.Enum):
     FOUND = "found"
 
 
-def choose_base_word(bank: dict[str, list[str]], rng: random.Random, exclude: str | None = None) -> str:
+def choose_base_word(
+    bank: dict[str, list[str]],
+    rng: random.Random,
+    exclude: str | None = None,
+    seen_history: list[list[str]] | None = None,
+) -> str:
+    """Picks the base word the player has gone longest without seeing
+    (never-seen words first; see freshness_order), skipping `exclude`
+    unless it's the only word in the bank."""
     choices = [w for w in bank if w != exclude] or list(bank)
-    return rng.choice(choices)
+    return freshness_order(choices, seen_history or [], rng)[0]
 
 
 class SubWordSession:
@@ -36,19 +45,23 @@ class SubWordSession:
         clues: dict[str, str],
         rng: random.Random | None = None,
         base_word: str | None = None,
+        seen_history: list[list[str]] | None = None,
     ) -> None:
+        """`seen_history` is the player's past games' base words, oldest
+        first, so new games favour base words they haven't met yet."""
         # stable id for the saved progress record (see storage.upsert_session)
         self.log_id = new_session_id()
         self._bank = bank
         self._clues = clues
         self._rng = rng or random.Random()
+        self._seen_history = seen_history or []
         self.base_words_shown: list[str] = []
         self.total_found_count = 0
         self.hints_used = 0
         self._pending_clue_word: str | None = None
         self.current_attempt: list[int] = []
         self.found_words: list[str] = []
-        self._set_base_word(base_word or choose_base_word(bank, self._rng))
+        self._set_base_word(base_word or choose_base_word(bank, self._rng, seen_history=self._seen_history))
 
     def _set_base_word(self, base_word: str) -> None:
         self.base_word = base_word
@@ -132,4 +145,6 @@ class SubWordSession:
         return word
 
     def new_base_word(self) -> None:
-        self._set_base_word(choose_base_word(self._bank, self._rng, exclude=self.base_word))
+        # this game's own base words count as the most recently seen
+        history = self._seen_history + [self.base_words_shown]
+        self._set_base_word(choose_base_word(self._bank, self._rng, exclude=self.base_word, seen_history=history))

@@ -1,9 +1,16 @@
 import random
 
+from simon.freshness import freshness_order
 from simon.storage import new_session_id
 from simon.typed_puzzle import TypedPuzzle
 
 PAIRS_PER_SESSION = 8
+
+
+def pair_key(word_a: str, word_b: str) -> str:
+    """Identifies a pair regardless of the direction it was played in, so
+    playing רופא>אפור counts as having seen אפור>רופא too."""
+    return "|".join(sorted((word_a, word_b)))
 
 
 class ChangeWordSession:
@@ -18,8 +25,9 @@ class ChangeWordSession:
 
     That mental rearranging -- holding a word in working memory and
     manipulating its letters -- is the point of the drill. Each word also
-    has an extra clue available as a hint. Pairs are played in a random
-    direction. UI-independent and seedable for testing.
+    has an extra clue available as a hint. Riddles the player hasn't seen
+    come first, and each is played in a random direction. UI-independent
+    and seedable for testing.
     """
 
     def __init__(
@@ -27,11 +35,17 @@ class ChangeWordSession:
         pairs: list[list[dict]],
         rng: random.Random | None = None,
         pair_count: int = PAIRS_PER_SESSION,
+        seen_history: list[list[str]] | None = None,
     ) -> None:
+        """`seen_history` is the player's past games' `pairs_shown` lists,
+        oldest first; riddles the player hasn't met yet are chosen first."""
         # stable id for the saved progress record (see storage.upsert_session)
         self.log_id = new_session_id()
         self._rng = rng or random.Random()
-        chosen = self._rng.sample(pairs, min(pair_count, len(pairs)))
+        by_key = {pair_key(a["word"], b["word"]): [a, b] for a, b in pairs}
+        history = [[pair_key(*shown.split(">")) for shown in game] for game in seen_history or []]
+        fresh_first = freshness_order(list(by_key), history, self._rng)
+        chosen = [by_key[key] for key in fresh_first[:pair_count]]
         self._rounds = [self._rng.sample(pair, 2) for pair in chosen]
         self._index = -1
         self._first_puzzles: list[TypedPuzzle] = []

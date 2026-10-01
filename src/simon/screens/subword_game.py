@@ -19,7 +19,9 @@ FEEDBACK_TEXT = {
 def build_subword_game_view(page: ft.Page, state: AppState) -> ft.View:
     session = state.subword_session
     if session is None:
-        session = SubWordSession(state.subword_bank, state.subword_clues)
+        session = SubWordSession(
+            state.subword_bank, state.subword_clues, seen_history=state.subword_progress.seen_history()
+        )
         state.subword_session = session
 
 

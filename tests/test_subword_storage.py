@@ -56,3 +56,9 @@ def test_saving_same_session_again_updates_it_in_place():
     assert len(sessions) == 1
     assert sessions[0]["words_found_count"] == 2
     assert sessions[0]["base_words"] == ["שלום", "מכתב"]
+
+
+def test_seen_history_lists_base_words_per_game():
+    store = SubWordProgressStore(store=InMemoryKeyValueStore())
+    store.save_session("a", base_words=["שלום", "מכתב"], words_found_count=2, hints_used=0)
+    assert store.seen_history() == [["שלום", "מכתב"]]

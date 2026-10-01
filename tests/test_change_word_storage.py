@@ -34,3 +34,9 @@ def test_best_changes_solved():
     for i, changes in enumerate([2, 5, 3]):
         _save(store, str(i), changes)
     assert store.best_changes_solved() == 5
+
+
+def test_seen_history_lists_pairs_per_game():
+    store = ChangeWordProgressStore(store=InMemoryKeyValueStore())
+    _save(store, "a", 1)
+    assert store.seen_history() == [["רופא>אפור"]]

@@ -53,3 +53,10 @@ def test_saving_same_session_again_updates_it_in_place():
     assert len(sessions) == 1
     assert sessions[0]["words_solved_count"] == 3
     assert sessions[0]["date"] == first_date
+
+
+def test_seen_history_lists_words_per_game_oldest_first():
+    store = ScrambleProgressStore(store=InMemoryKeyValueStore())
+    store.save_session("a", category="אוכל", words_shown=["לחם"], words_solved_count=1, hints_used=0, revealed_count=0)
+    store.save_session("b", category="אוכל", words_shown=["מרק", "סלט"], words_solved_count=1, hints_used=0, revealed_count=0)
+    assert store.seen_history() == [["לחם"], ["מרק", "סלט"]]

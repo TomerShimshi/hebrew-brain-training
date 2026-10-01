@@ -41,6 +41,11 @@ class ChangeWordProgressStore:
         sessions = self._data["sessions"]
         return sessions[-1] if sessions else None
 
+    def seen_history(self) -> list[list[str]]:
+        """The riddle pairs shown in each past game, oldest first -- used to
+        show the player material they haven't seen yet."""
+        return [s.get("pairs_shown", []) for s in self._data["sessions"]]
+
     def recent_sessions(self, n: int = 10) -> list[dict]:
         return self._data["sessions"][-n:]
 

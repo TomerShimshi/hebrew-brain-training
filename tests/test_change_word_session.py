@@ -106,3 +106,17 @@ def test_plays_requested_number_of_pairs_each_once():
 def test_pairs_are_played_in_both_directions():
     firsts = {_session(seed=s, pair_count=1).first["word"] for s in range(40)}
     assert {"רופא", "אפור"} <= firsts
+
+
+def test_unseen_riddles_are_chosen_first():
+    # both directions of a pair count as seen
+    history = [["רופא>אפור"], ["מלח>לחם"]]
+    for seed in range(10):
+        session = ChangeWordSession(PAIRS, rng=random.Random(seed), pair_count=1, seen_history=history)
+        assert {session.first["word"], session.second["word"]} == {"חמש", "שמח"}
+
+
+def test_when_all_seen_the_oldest_riddle_comes_first():
+    history = [["לחם>מלח"], ["רופא>אפור"], ["חמש>שמח"]]
+    session = ChangeWordSession(PAIRS, rng=random.Random(0), pair_count=1, seen_history=history)
+    assert {session.first["word"], session.second["word"]} == {"לחם", "מלח"}

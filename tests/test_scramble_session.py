@@ -54,3 +54,17 @@ def test_clue_counts_as_one_hint_per_word():
     assert not session.clue_shown
     session.get_clue()
     assert session.hints_used == 2
+
+
+def test_unseen_words_come_first():
+    history = [["שלום", "חתול"]]
+    for seed in range(10):
+        session = ScrambleSession("test", WORDS, rng=random.Random(seed), seen_history=history)
+        assert session.answer == "מלפפון"
+
+
+def test_seen_words_still_played_oldest_first():
+    session = ScrambleSession("test", WORDS, rng=random.Random(0), seen_history=[["חתול"], ["שלום"]])
+    while session.has_next_word:
+        session.next_word()
+    assert session.words_shown == ["מלפפון", "חתול", "שלום"]

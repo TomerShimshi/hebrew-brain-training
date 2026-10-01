@@ -17,7 +17,11 @@ def build_scramble_summary_view(page: ft.Page, state: AppState) -> ft.View:
 
     async def same_category(_: ft.ControlEvent) -> None:
         category = session.category
-        state.scramble_session = ScrambleSession(category, state.scramble_categories[category]["words"])
+        state.scramble_session = ScrambleSession(
+            category,
+            state.scramble_categories[category]["words"],
+            seen_history=state.scramble_progress.seen_history(),
+        )
         await page.push_route("/scramble/play")
 
     async def other_category(_: ft.ControlEvent) -> None:

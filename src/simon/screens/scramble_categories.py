@@ -10,7 +10,9 @@ THEME = GAME_THEMES["scramble"]
 def build_scramble_categories_view(page: ft.Page, state: AppState) -> ft.View:
     def category_card(name: str, info: dict) -> ft.Container:
         async def on_click(_: ft.ControlEvent) -> None:
-            state.scramble_session = ScrambleSession(name, info["words"])
+            state.scramble_session = ScrambleSession(
+                name, info["words"], seen_history=state.scramble_progress.seen_history()
+            )
             await page.push_route("/scramble/play")
 
         return ft.Container(

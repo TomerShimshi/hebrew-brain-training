@@ -210,3 +210,18 @@ def test_choose_base_word_excludes_given_word_when_alternatives_exist():
 def test_choose_base_word_falls_back_when_only_excluded_word_exists():
     single = {"שלום": ["של"]}
     assert choose_base_word(single, random.Random(0), exclude="שלום") == "שלום"
+
+
+def test_new_game_prefers_a_base_word_not_seen_before():
+    for seed in range(10):
+        session = SubWordSession(BANK, CLUES, rng=random.Random(seed), seen_history=[["שלום"]])
+        assert session.base_word == "מכתב"
+
+
+def test_new_word_button_avoids_words_shown_earlier_in_the_game():
+    bank = {**BANK, "חלון": ["חל"]}
+    session = SubWordSession(bank, CLUES, rng=random.Random(0), base_word="שלום", seen_history=[["מכתב"]])
+    session.new_base_word()
+    assert session.base_word == "חלון"  # never seen; מכתב was seen in a past game
+    session.new_base_word()
+    assert session.base_word == "מכתב"  # seen longer ago than this game's שלום

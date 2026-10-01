@@ -1,5 +1,6 @@
 import random
 
+from simon.freshness import freshness_order
 from simon.letter_puzzle import LetterPuzzle, scramble_letters
 from simon.storage import new_session_id
 
@@ -8,21 +9,28 @@ class ScrambleSession:
     """Drives one scrambled-words session within a single category: each
     word is shown as shuffled letter tiles (a LetterPuzzle), and the player
     taps them in order to spell the word. Every word in the category is
-    played once, in random order. `words` maps each word to a short
-    definition the player can ask for as a clue.
+    played once, unseen words first (see freshness_order). `words` maps
+    each word to a short definition the player can ask for as a clue.
 
     UI-independent and seedable so word order and scrambles are
     deterministically testable.
     """
 
-    def __init__(self, category: str, words: dict[str, str], rng: random.Random | None = None) -> None:
+    def __init__(
+        self,
+        category: str,
+        words: dict[str, str],
+        rng: random.Random | None = None,
+        seen_history: list[list[str]] | None = None,
+    ) -> None:
         # stable id for the saved progress record (see storage.upsert_session)
         self.log_id = new_session_id()
         self.category = category
         self._clues = words
         self._rng = rng or random.Random()
-        self._queue = list(words)
-        self._rng.shuffle(self._queue)
+        # words the player hasn't met yet come first, so stopping a game
+        # early doesn't mean seeing the same opening words every time
+        self._queue = freshness_order(list(words), seen_history or [], self._rng)
         self._puzzles: list[LetterPuzzle] = []
         self._clues_shown = 0
         self._advance()
