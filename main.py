@@ -7,7 +7,7 @@ import flet as ft
 
 from simon.app_mode import is_public_mode
 from simon.app_state import AppState
-from simon.change_word_bank import load_pairs
+from simon.change_word_bank import load_all_pairs
 from simon.screens.change_word_game import build_change_word_game_view
 from simon.screens.change_word_summary import build_change_word_summary_view
 from simon.screens.home import build_home_view
@@ -58,7 +58,7 @@ def main(page: ft.Page) -> None:
         subword_bank=load_bank(),
         subword_clues=load_clues(),
         scramble_categories=load_categories(),
-        change_word_pairs=load_pairs(),
+        change_word_pairs=load_all_pairs(),
     )
 
     def render_current_route(*_args) -> None:

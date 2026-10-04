@@ -3,6 +3,7 @@ import random
 from simon.freshness import freshness_order
 from simon.letter_puzzle import LetterPuzzle, scramble_letters
 from simon.storage import new_session_id
+from simon.word_levels import ADVANCED, REGULAR
 
 
 class ScrambleSession:
@@ -22,10 +23,12 @@ class ScrambleSession:
         words: dict[str, str],
         rng: random.Random | None = None,
         seen_history: list[list[str]] | None = None,
+        level: str = REGULAR,
     ) -> None:
         # stable id for the saved progress record (see storage.upsert_session)
         self.log_id = new_session_id()
         self.category = category
+        self.level = level
         self._clues = words
         self._rng = rng or random.Random()
         # words the player hasn't met yet come first, so stopping a game
@@ -39,7 +42,10 @@ class ScrambleSession:
         answer = self._queue[len(self._puzzles)]
         self.puzzle = LetterPuzzle(answer, scramble_letters(answer, self._rng))
         self._puzzles.append(self.puzzle)
-        self.clue_shown = False
+        # advanced words are new vocabulary: show the meaning upfront (and
+        # don't count it as a hint) -- unscrambling a word you don't know
+        # without its meaning would be guessing, not learning
+        self.clue_shown = self.level == ADVANCED
 
     @property
     def answer(self) -> str:
@@ -73,6 +79,10 @@ class ScrambleSession:
     @property
     def has_next_word(self) -> bool:
         return len(self._puzzles) < len(self._queue)
+
+    @property
+    def clue(self) -> str:
+        return self._clues[self.answer]
 
     def get_clue(self) -> str:
         """The current word's definition. Counts as a hint the first time

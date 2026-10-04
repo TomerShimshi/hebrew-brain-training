@@ -3,6 +3,7 @@ import random
 from simon.freshness import freshness_order
 from simon.storage import new_session_id
 from simon.typed_puzzle import TypedPuzzle
+from simon.word_levels import REGULAR
 
 PAIRS_PER_SESSION = 8
 
@@ -36,11 +37,13 @@ class ChangeWordSession:
         rng: random.Random | None = None,
         pair_count: int = PAIRS_PER_SESSION,
         seen_history: list[list[str]] | None = None,
+        level: str = REGULAR,
     ) -> None:
         """`seen_history` is the player's past games' `pairs_shown` lists,
         oldest first; riddles the player hasn't met yet are chosen first."""
         # stable id for the saved progress record (see storage.upsert_session)
         self.log_id = new_session_id()
+        self.level = level
         self._rng = rng or random.Random()
         by_key = {pair_key(a["word"], b["word"]): [a, b] for a, b in pairs}
         history = [[pair_key(*shown.split(">")) for shown in game] for game in seen_history or []]

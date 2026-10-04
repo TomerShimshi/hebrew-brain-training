@@ -5,6 +5,8 @@ from simon.change_word_session import ChangeWordSession
 from simon.letter_puzzle import GuessResult
 from simon.screens.hebrew_keyboard import hebrew_keyboard
 from simon.ui_helpers import GAME_THEMES, TEXT_SECONDARY, chip_button, content_width, game_header, primary_button, rtl_text
+from simon.word_levels import ADVANCED
+from simon.word_levels import LABELS as LEVEL_LABELS
 
 THEME = GAME_THEMES["change_word"]
 SLOT_EMPTY_COLOR = "#FFFFFF"
@@ -15,8 +17,11 @@ FEEDBACK_WRONG = "כמעט! נסו מילה אחרת (אפשר למחוק עם �
 def build_change_word_game_view(page: ft.Page, state: AppState) -> ft.View:
     session = state.change_word_session
     if session is None:
+        level = state.word_level
         session = ChangeWordSession(
-            state.change_word_pairs, seen_history=state.change_word_progress.seen_history()
+            state.change_word_pairs[level],
+            seen_history=state.change_word_progress.seen_history(),
+            level=level,
         )
         state.change_word_session = session
 
@@ -58,7 +63,8 @@ def build_change_word_game_view(page: ft.Page, state: AppState) -> ft.View:
 
     def render_all() -> None:
         puzzle = session.puzzle
-        progress_label.value = f"זוג {session.position} מתוך {session.total_pairs}"
+        level_note = f" · {LEVEL_LABELS[session.level]}" if session.level == ADVANCED else ""
+        progress_label.value = f"זוג {session.position} מתוך {session.total_pairs}{level_note}"
         first, second = session.first, session.second
         first_found = session.stage == 2
         line_texts = [
@@ -152,6 +158,7 @@ def build_change_word_game_view(page: ft.Page, state: AppState) -> ft.View:
             first_words_solved=session.first_words_solved,
             hints_used=session.hints_used,
             revealed_count=session.revealed_count,
+            level=session.level,
         )
 
     async def finish_session(_: ft.ControlEvent) -> None:

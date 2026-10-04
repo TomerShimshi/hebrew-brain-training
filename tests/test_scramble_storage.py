@@ -60,3 +60,9 @@ def test_seen_history_lists_words_per_game_oldest_first():
     store.save_session("a", category="אוכל", words_shown=["לחם"], words_solved_count=1, hints_used=0, revealed_count=0)
     store.save_session("b", category="אוכל", words_shown=["מרק", "סלט"], words_solved_count=1, hints_used=0, revealed_count=0)
     assert store.seen_history() == [["לחם"], ["מרק", "סלט"]]
+
+
+def test_saved_game_records_its_level():
+    store = ScrambleProgressStore(store=InMemoryKeyValueStore())
+    store.save_session("a", category="אוכל", words_shown=["קינמון"], words_solved_count=1, hints_used=0, revealed_count=0, level="advanced")
+    assert store.last_session()["level"] == "advanced"

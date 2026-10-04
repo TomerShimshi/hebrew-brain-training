@@ -2,6 +2,8 @@ import flet as ft
 
 from simon.app_state import AppState
 from simon.ui_helpers import ACCENT, GAME_THEMES, TEXT_SECONDARY, chip_button, rtl_text, soft_shadow
+from simon.word_levels import LABELS as LEVEL_LABELS
+from simon.word_levels import LEVELS
 
 DOT_FILLED = ACCENT
 DOT_EMPTY = "#E3E7F0"
@@ -128,6 +130,41 @@ def _engagement_banner(state: AppState) -> ft.Container:
     )
 
 
+def _level_switch(page: ft.Page, state: AppState) -> ft.Row:
+    """"רמת המילים: רגיל | מתקדם" -- the word level for the word games,
+    remembered per profile. The selected level is filled in."""
+    pills: dict[str, ft.Container] = {}
+
+    def paint() -> None:
+        for level, pill in pills.items():
+            selected = level == state.word_level
+            pill.bgcolor = ACCENT if selected else ft.Colors.with_opacity(0.10, ACCENT)
+            pill.content.color = "#FFFFFF" if selected else ACCENT
+
+    def pill(level: str) -> ft.Container:
+        async def on_click(_: ft.ControlEvent) -> None:
+            state.settings.word_level = level
+            paint()
+            page.update()
+
+        pills[level] = ft.Container(
+            content=rtl_text(LEVEL_LABELS[level], size=16, weight=ft.FontWeight.W_600),
+            border_radius=20,
+            padding=ft.Padding(18, 8, 18, 8),
+            on_click=on_click,
+            ink=True,
+        )
+        return pills[level]
+
+    row = ft.Row(
+        [rtl_text("רמת המילים:", size=15, color=TEXT_SECONDARY), *[pill(level) for level in LEVELS]],
+        alignment=ft.MainAxisAlignment.CENTER,
+        spacing=8,
+    )
+    paint()
+    return row
+
+
 def build_home_view(page: ft.Page, state: AppState) -> ft.View:
     async def start_simon(_: ft.ControlEvent) -> None:
         state.session = None  # let /simon build a fresh session starting at length 1
@@ -168,12 +205,15 @@ def build_home_view(page: ft.Page, state: AppState) -> ft.View:
         controls=[
             ft.Column(
                 [
+                    ft.Text("Made by Tomer Shimshi", size=12, color=TEXT_SECONDARY),
                     rtl_text("משחקי אימון", size=40, weight=ft.FontWeight.BOLD),
                     ft.Container(height=4),
                     rtl_text("בחר משחק לתרגול", size=18, color=TEXT_SECONDARY),
                     ft.Container(height=20),
                     top_card,
-                    ft.Container(height=24),
+                    ft.Container(height=16),
+                    _level_switch(page, state),
+                    ft.Container(height=16),
                     _game_card(
                         "simon",
                         "סיימון",

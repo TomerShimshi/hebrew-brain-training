@@ -1,5 +1,6 @@
 from simon.kv_store import KeyValueStore, get_default_store
 from simon.storage import upsert_session
+from simon.word_levels import REGULAR
 
 PROGRESS_KEY = "change_word_progress_v1"
 _EMPTY_PROGRESS = {"sessions": []}
@@ -21,6 +22,7 @@ class ChangeWordProgressStore:
         first_words_solved: int,
         hints_used: int,
         revealed_count: int,
+        level: str = REGULAR,
     ) -> None:
         """Saved after every word finished (see upsert_session), so leaving
         mid-game keeps the progress so far."""
@@ -33,6 +35,7 @@ class ChangeWordProgressStore:
                 "first_words_solved": first_words_solved,
                 "hints_used": hints_used,
                 "revealed_count": revealed_count,
+                "level": level,
             },
         )
         self._save()

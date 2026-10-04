@@ -36,7 +36,7 @@ def no_network_or_disk(monkeypatch, tmp_path):
 
 
 def _state() -> AppState:
-    return AppState(subword_bank={}, subword_clues={}, scramble_categories={}, change_word_pairs=[])
+    return AppState(subword_bank={}, subword_clues={}, scramble_categories={}, change_word_pairs={})
 
 
 def test_mode_is_read_from_the_environment(monkeypatch):

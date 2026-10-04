@@ -1,5 +1,6 @@
 from simon.kv_store import KeyValueStore, get_default_store
 from simon.storage import upsert_session
+from simon.word_levels import REGULAR
 
 PROGRESS_KEY = "scramble_progress_v1"
 _EMPTY_PROGRESS = {"sessions": []}
@@ -21,6 +22,7 @@ class ScrambleProgressStore:
         words_solved_count: int,
         hints_used: int,
         revealed_count: int,
+        level: str = REGULAR,
     ) -> None:
         upsert_session(
             self._data["sessions"],
@@ -31,6 +33,7 @@ class ScrambleProgressStore:
                 "words_solved_count": words_solved_count,
                 "hints_used": hints_used,
                 "revealed_count": revealed_count,
+                "level": level,
             },
         )
         self._save()

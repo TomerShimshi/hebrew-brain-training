@@ -9,6 +9,7 @@ from simon.memory_storage import MemoryProgressStore
 from simon.scramble_session import ScrambleSession
 from simon.scramble_storage import ScrambleProgressStore
 from simon.session_manager import SimonSession
+from simon.settings_storage import SettingsStore
 from simon.storage import ProgressStore
 from simon.subword_session import SubWordSession
 from simon.subword_storage import SubWordProgressStore
@@ -19,7 +20,8 @@ class AppState:
     subword_bank: dict[str, list[str]]
     subword_clues: dict[str, str]
     scramble_categories: dict[str, dict]
-    change_word_pairs: list[list[dict]]
+    # word level (see word_levels) -> that level's riddle pairs
+    change_word_pairs: dict[str, list[list[dict]]]
 
     # None until a profile is chosen on the picker screen -- main.py's
     # routing gates every other screen on `profile` being set, so by the
@@ -34,6 +36,7 @@ class AppState:
     scramble_progress: ScrambleProgressStore | None = None
     change_word_progress: ChangeWordProgressStore | None = None
     engagement: EngagementStore | None = None
+    settings: SettingsStore | None = None
 
     session: SimonSession | None = None
     memory_session: MemoryGameSession | None = None
@@ -65,3 +68,8 @@ class AppState:
         self.scramble_progress = ScrambleProgressStore(store=store)
         self.change_word_progress = ChangeWordProgressStore(store=store)
         self.engagement = EngagementStore(store=store)
+        self.settings = SettingsStore(store=store)
+
+    @property
+    def word_level(self) -> str:
+        return self.settings.word_level

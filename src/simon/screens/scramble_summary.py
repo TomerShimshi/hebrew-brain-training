@@ -3,6 +3,7 @@ import flet as ft
 from simon.app_state import AppState
 from simon.scramble_session import ScrambleSession
 from simon.ui_helpers import GAME_THEMES, chip_button, primary_button, rtl_text
+from simon.word_levels import topic_words
 
 THEME = GAME_THEMES["scramble"]
 
@@ -19,8 +20,9 @@ def build_scramble_summary_view(page: ft.Page, state: AppState) -> ft.View:
         category = session.category
         state.scramble_session = ScrambleSession(
             category,
-            state.scramble_categories[category]["words"],
+            topic_words(state.scramble_categories[category], session.level),
             seen_history=state.scramble_progress.seen_history(),
+            level=session.level,
         )
         await page.push_route("/scramble/play")
 

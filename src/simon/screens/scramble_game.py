@@ -4,6 +4,8 @@ from simon.app_state import AppState
 from simon.letter_puzzle import GuessResult
 from simon.screens.letter_board import LetterBoard
 from simon.ui_helpers import GAME_THEMES, chip_button, game_header, primary_button, rtl_text
+from simon.word_levels import ADVANCED
+from simon.word_levels import LABELS as LEVEL_LABELS
 
 THEME = GAME_THEMES["scramble"]
 TILE_USED_COLOR = "#C9BCF5"
@@ -31,11 +33,15 @@ def build_scramble_game_view(page: ft.Page, state: AppState) -> ft.View:
     )
 
     def render_all() -> None:
-        progress_label.value = f"{icon} {session.category} · מילה {session.position} מתוך {session.total_words}"
+        level_note = f" · {LEVEL_LABELS[session.level]}" if session.level == ADVANCED else ""
+        progress_label.value = f"{icon} {session.category}{level_note} · מילה {session.position} מתוך {session.total_words}"
         board.render()
-        # once asked for, the clue stays up for the rest of the word so the
-        # player can keep glancing back at it while arranging letters
+        clue_label.value = f"\U0001f4a1 {session.clue}"
+        # once shown (asked for, or upfront at the advanced level), the clue
+        # stays up for the rest of the word so the player can keep glancing
+        # back at it while arranging letters
         clue_box.visible = session.clue_shown
+        clue_button.visible = not session.clue_shown
         playing_controls.visible = not session.puzzle.done
         next_button.visible = session.puzzle.done
         next_button.content.value = "המילה הבאה" if session.has_next_word else "לסיכום"
@@ -76,7 +82,7 @@ def build_scramble_game_view(page: ft.Page, state: AppState) -> ft.View:
         page.update()
 
     async def show_clue(_: ft.ControlEvent) -> None:
-        clue_label.value = f"\U0001f4a1 {session.get_clue()}"
+        session.get_clue()
         render_all()
         page.update()
 
@@ -94,6 +100,7 @@ def build_scramble_game_view(page: ft.Page, state: AppState) -> ft.View:
             words_solved_count=session.solved_count,
             hints_used=session.hints_used,
             revealed_count=session.revealed_count,
+            level=session.level,
         )
 
     async def finish_session(_: ft.ControlEvent) -> None:
@@ -114,6 +121,7 @@ def build_scramble_game_view(page: ft.Page, state: AppState) -> ft.View:
         state.scramble_session = None
         await page.push_route("/scramble")
 
+    clue_button = chip_button("רמז: מה המילה?", show_clue, THEME["accent"])
     playing_controls = ft.Column(
         [
             ft.Row(
@@ -126,7 +134,7 @@ def build_scramble_game_view(page: ft.Page, state: AppState) -> ft.View:
             ),
             ft.Row(
                 [
-                    chip_button("רמז: מה המילה?", show_clue, THEME["accent"]),
+                    clue_button,
                     chip_button("רמז: אות נוספת", hint, THEME["accent"]),
                     chip_button("גלה מילה", reveal, THEME["accent"]),
                 ],

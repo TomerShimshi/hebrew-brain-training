@@ -3,15 +3,22 @@ import flet as ft
 from simon.app_state import AppState
 from simon.scramble_session import ScrambleSession
 from simon.ui_helpers import GAME_THEMES, TEXT_SECONDARY, chip_button, rtl_text, soft_shadow
+from simon.word_levels import LABELS as LEVEL_LABELS
+from simon.word_levels import topic_words
 
 THEME = GAME_THEMES["scramble"]
 
 
 def build_scramble_categories_view(page: ft.Page, state: AppState) -> ft.View:
+    level = state.word_level
+
     def category_card(name: str, info: dict) -> ft.Container:
         async def on_click(_: ft.ControlEvent) -> None:
             state.scramble_session = ScrambleSession(
-                name, info["words"], seen_history=state.scramble_progress.seen_history()
+                name,
+                topic_words(info, level),
+                seen_history=state.scramble_progress.seen_history(),
+                level=level,
             )
             await page.push_route("/scramble/play")
 
@@ -20,7 +27,7 @@ def build_scramble_categories_view(page: ft.Page, state: AppState) -> ft.View:
                 [
                     rtl_text(info["icon"], size=40),
                     rtl_text(name, size=20, weight=ft.FontWeight.BOLD),
-                    rtl_text(f"{len(info['words'])} מילים", size=13, color=TEXT_SECONDARY),
+                    rtl_text(f"{len(topic_words(info, level))} מילים", size=13, color=TEXT_SECONDARY),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=4,
@@ -48,10 +55,10 @@ def build_scramble_categories_view(page: ft.Page, state: AppState) -> ft.View:
                         alignment=ft.MainAxisAlignment.CENTER,
                     ),
                     rtl_text(f"מילים מבולגנות {THEME['icon']}", size=30, weight=ft.FontWeight.BOLD),
-                    rtl_text("בחרו נושא", size=18, color=TEXT_SECONDARY),
+                    rtl_text(f"בחרו נושא · רמה: {LEVEL_LABELS[level]}", size=18, color=TEXT_SECONDARY),
                     ft.Container(height=12),
                     ft.Row(
-                        [category_card(name, info) for name, info in state.scramble_categories.items()],
+                        [category_card(name, info) for name, info in state.scramble_categories.items() if topic_words(info, level)],
                         wrap=True,
                         alignment=ft.MainAxisAlignment.CENTER,
                         spacing=14,
