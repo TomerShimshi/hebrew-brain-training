@@ -5,6 +5,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 import flet as ft
 
+from simon.app_mode import is_public_mode
 from simon.app_state import AppState
 from simon.change_word_bank import load_pairs
 from simon.screens.change_word_game import build_change_word_game_view
@@ -41,6 +42,8 @@ ROUTE_BUILDERS = {
     "/change/summary": build_change_word_summary_view,
     "/progress": build_progress_view,
 }
+# Screens built on saved history -- not reachable in the public app.
+FAMILY_ONLY_ROUTES = {"/progress"}
 
 
 def main(page: ft.Page) -> None:
@@ -65,15 +68,23 @@ def main(page: ft.Page) -> None:
         page.views.clear()
 
         if state.profile is None:
-            requested = profile_from_route(page.route)
-            if requested:
-                state.activate_profile(requested)
+            if is_public_mode():
+                # no profiles in the public app: every visitor is an
+                # anonymous guest whose play is never saved
+                state.activate_guest()
             else:
-                page.views.append(build_profile_picker_view(page, state))
-                page.update()
-                return
+                requested = profile_from_route(page.route)
+                if requested:
+                    state.activate_profile(requested)
+                else:
+                    page.views.append(build_profile_picker_view(page, state))
+                    page.update()
+                    return
 
-        builder = ROUTE_BUILDERS.get(route_path(page.route), build_home_view)
+        path = route_path(page.route)
+        if state.public and path in FAMILY_ONLY_ROUTES:
+            path = "/"
+        builder = ROUTE_BUILDERS.get(path, build_home_view)
         page.views.append(builder(page, state))
         page.update()
 

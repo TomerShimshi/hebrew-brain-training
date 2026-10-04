@@ -42,7 +42,7 @@ def _change_word_caption(state: AppState) -> str:
     return f"בפעם הקודמת: שינית {last['changes_solved']} מילים"
 
 
-def _game_card(theme_key: str, title: str, subtitle: str, caption: str, on_click) -> ft.Container:
+def _game_card(theme_key: str, title: str, subtitle: str, caption: str | None, on_click) -> ft.Container:
     theme = GAME_THEMES[theme_key]
     icon_bubble = ft.Container(
         content=rtl_text(theme["icon"], size=34),
@@ -60,7 +60,7 @@ def _game_card(theme_key: str, title: str, subtitle: str, caption: str, on_click
                     [
                         rtl_text(title, size=22, weight=ft.FontWeight.BOLD),
                         rtl_text(subtitle, size=14, color=TEXT_SECONDARY),
-                        rtl_text(caption, size=13, color=theme["accent"]),
+                        *([rtl_text(caption, size=13, color=theme["accent"])] if caption else []),
                     ],
                     spacing=2,
                     horizontal_alignment=ft.CrossAxisAlignment.START,
@@ -152,6 +152,17 @@ def build_home_view(page: ft.Page, state: AppState) -> ft.View:
     async def go_progress(_: ft.ControlEvent) -> None:
         await page.push_route("/progress")
 
+    def caption(last_time) -> str | None:
+        # the public app keeps no history, so there's no "last time" to show
+        return None if state.public else last_time(state)
+
+    if state.public:
+        top_card = rtl_text("ללא הרשמה · שום מידע לא נשמר", size=14, color=TEXT_SECONDARY)
+        footer: list[ft.Control] = []
+    else:
+        top_card = _engagement_banner(state)
+        footer = [ft.Container(height=20), chip_button("\U0001f4ca ההתקדמות שלי", go_progress, ACCENT)]
+
     return ft.View(
         route="/",
         controls=[
@@ -161,13 +172,13 @@ def build_home_view(page: ft.Page, state: AppState) -> ft.View:
                     ft.Container(height=4),
                     rtl_text("בחר משחק לתרגול", size=18, color=TEXT_SECONDARY),
                     ft.Container(height=20),
-                    _engagement_banner(state),
+                    top_card,
                     ft.Container(height=24),
                     _game_card(
                         "simon",
                         "סיימון",
                         "משחק זיכרון צבעים ורצפים",
-                        _simon_caption(state),
+                        caption(_simon_caption),
                         start_simon,
                     ),
                     ft.Container(height=16),
@@ -175,7 +186,7 @@ def build_home_view(page: ft.Page, state: AppState) -> ft.View:
                         "memory",
                         "זיכרון קלפים",
                         "מצא את הזוגות התואמים",
-                        _memory_caption(state),
+                        caption(_memory_caption),
                         start_memory,
                     ),
                     ft.Container(height=16),
@@ -183,7 +194,7 @@ def build_home_view(page: ft.Page, state: AppState) -> ft.View:
                         "subword",
                         "בניית מילים",
                         "מצאו מילים בתוך מילה",
-                        _subword_caption(state),
+                        caption(_subword_caption),
                         start_subword,
                     ),
                     ft.Container(height=16),
@@ -191,7 +202,7 @@ def build_home_view(page: ft.Page, state: AppState) -> ft.View:
                         "scramble",
                         "מילים מבולגנות",
                         "סדרו את האותיות למילה",
-                        _scramble_caption(state),
+                        caption(_scramble_caption),
                         start_scramble,
                     ),
                     ft.Container(height=16),
@@ -199,11 +210,10 @@ def build_home_view(page: ft.Page, state: AppState) -> ft.View:
                         "change_word",
                         "שינוי מילים",
                         "אותן אותיות, מילה חדשה",
-                        _change_word_caption(state),
+                        caption(_change_word_caption),
                         start_change_word,
                     ),
-                    ft.Container(height=20),
-                    chip_button("\U0001f4ca ההתקדמות שלי", go_progress, ACCENT),
+                    *footer,
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 alignment=ft.MainAxisAlignment.CENTER,

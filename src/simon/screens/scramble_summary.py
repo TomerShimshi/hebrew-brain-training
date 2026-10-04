@@ -13,7 +13,7 @@ def build_scramble_summary_view(page: ft.Page, state: AppState) -> ft.View:
     shown = len(session.words_shown) if session else 0
     hints_used = session.hints_used if session else 0
     best = state.scramble_progress.best_words_solved_count()
-    is_new_best = solved > 0 and solved >= (best or 0)
+    is_new_best = not state.public and solved > 0 and solved >= (best or 0)
 
     async def same_category(_: ft.ControlEvent) -> None:
         category = session.category
@@ -47,7 +47,7 @@ def build_scramble_summary_view(page: ft.Page, state: AppState) -> ft.View:
                     rtl_text(f"סידרת {solved} מילים מתוך {shown}", size=24),
                     rtl_text(f"נושא: {session.category}", size=18) if session else ft.Container(),
                     ft.Container(height=8),
-                    rtl_text(f"השיא שלך: {best}", size=18) if best else ft.Container(),
+                    rtl_text(f"השיא שלך: {best}", size=18) if best and not state.public else ft.Container(),
                     rtl_text(f"רמזים שנעשה בהם שימוש: {hints_used}", size=14) if hints_used else ft.Container(),
                     ft.Container(height=32),
                     primary_button("שוב באותו נושא", same_category, THEME["accent"])

@@ -12,7 +12,7 @@ def build_change_word_summary_view(page: ft.Page, state: AppState) -> ft.View:
     pairs = session.position if session else 0
     hints_used = session.hints_used if session else 0
     best = state.change_word_progress.best_changes_solved()
-    is_new_best = changes > 0 and changes >= (best or 0)
+    is_new_best = not state.public and changes > 0 and changes >= (best or 0)
 
     async def play_again(_: ft.ControlEvent) -> None:
         state.change_word_session = None
@@ -36,7 +36,7 @@ def build_change_word_summary_view(page: ft.Page, state: AppState) -> ft.View:
                     ft.Container(height=16),
                     rtl_text(f"שינית {changes} מילים מתוך {pairs}", size=24),
                     ft.Container(height=8),
-                    rtl_text(f"השיא שלך: {best}", size=18) if best else ft.Container(),
+                    rtl_text(f"השיא שלך: {best}", size=18) if best and not state.public else ft.Container(),
                     rtl_text(f"רמזים שנעשה בהם שימוש: {hints_used}", size=14) if hints_used else ft.Container(),
                     ft.Container(height=32),
                     primary_button("משחק חדש", play_again, THEME["accent"]),

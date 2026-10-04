@@ -10,7 +10,7 @@ def build_simon_summary_view(page: ft.Page, state: AppState) -> ft.View:
     session = state.session
     current_streak = session.best_length if session else 0
     best_streak = state.progress.best_length_ever()
-    is_new_best = current_streak > 0 and current_streak >= best_streak
+    is_new_best = not state.public and current_streak > 0 and current_streak >= best_streak
 
     async def play_again(_: ft.ControlEvent) -> None:
         state.session = None
@@ -34,7 +34,7 @@ def build_simon_summary_view(page: ft.Page, state: AppState) -> ft.View:
                     ft.Container(height=16),
                     rtl_text(f"הרצף הנוכחי שלך: {current_streak}", size=24),
                     ft.Container(height=8),
-                    rtl_text(f"השיא שלך: {best_streak}", size=20),
+                    rtl_text(f"השיא שלך: {best_streak}", size=20) if not state.public else ft.Container(),
                     ft.Container(height=32),
                     primary_button("משחק חדש", play_again, THEME["accent"]),
                     ft.Container(height=12),

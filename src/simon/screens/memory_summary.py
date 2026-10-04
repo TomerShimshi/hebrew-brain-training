@@ -11,7 +11,7 @@ def build_memory_summary_view(page: ft.Page, state: AppState) -> ft.View:
     moves = session.moves if session else 0
     pair_count = session.pair_count if session else 0
     best_moves = state.memory_progress.best_moves_for(pair_count) if session else None
-    is_new_best = session is not None and moves == best_moves
+    is_new_best = not state.public and session is not None and moves == best_moves
 
     async def play_again(_: ft.ControlEvent) -> None:
         state.memory_session = None
@@ -36,7 +36,7 @@ def build_memory_summary_view(page: ft.Page, state: AppState) -> ft.View:
                     rtl_text(f"מספר הצעדים שלך: {moves}", size=24),
                     ft.Container(height=8),
                     rtl_text(
-                        f"השיא שלך בגודל הזה: {best_moves}" if best_moves else "",
+                        f"השיא שלך בגודל הזה: {best_moves}" if best_moves and not state.public else "",
                         size=20,
                     ),
                     ft.Container(height=32),

@@ -1,7 +1,23 @@
 services:
+  # The family app: per-profile progress saved to Upstash. Its
+  # UPSTASH_REDIS_REST_URL / _TOKEN are set in the Render dashboard.
   - type: web
     name: simon
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn web:app --host 0.0.0.0 --port $PORT
+
+  # The public app: the same games for anyone, with nothing saved (see
+  # src/simon/app_mode.py). Never give this service the Upstash variables --
+  # it has no business near the family's data (and the code refuses to use
+  # persistent storage in public mode anyway).
+  - type: web
+    name: simon-public
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn web:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: APP_MODE
+        value: public

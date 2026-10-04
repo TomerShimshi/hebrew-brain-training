@@ -16,6 +16,7 @@ import urllib.request
 from pathlib import Path
 from typing import Protocol
 
+from simon.app_mode import is_public_mode
 from simon.storage_paths import storage_dir as _local_storage_dir
 
 REQUEST_TIMEOUT_S = 5
@@ -166,7 +167,16 @@ def _clean_env(value: str | None) -> str | None:
     return value
 
 
+class PublicModeStorageError(RuntimeError):
+    """Raised if anything tries to reach persistent storage in public mode."""
+
+
 def get_default_store() -> KeyValueStore:
+    if is_public_mode():
+        # The public app must never touch the family's database -- nor the
+        # local-file fallback, which every visitor would share. Its storage
+        # is a fresh InMemoryKeyValueStore per visit (AppState.activate_guest).
+        raise PublicModeStorageError("persistent storage is disabled in public mode")
     url = _clean_env(os.environ.get("UPSTASH_REDIS_REST_URL"))
     token = _clean_env(os.environ.get("UPSTASH_REDIS_REST_TOKEN"))
     if url and token:
