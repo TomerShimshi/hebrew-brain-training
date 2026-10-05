@@ -42,12 +42,16 @@ ROUTE_BUILDERS = {
     "/change/summary": build_change_word_summary_view,
     "/progress": build_progress_view,
 }
+# Browser tab / window title -- also used for the web page shell (web.py), so
+# the tab names the app even while it's still loading.
+APP_TITLE = "Hebrew Brain Training"
+
 # Screens built on saved history -- not reachable in the public app.
 FAMILY_ONLY_ROUTES = {"/progress"}
 
 
 def main(page: ft.Page) -> None:
-    page.title = "משחקי אימון"
+    page.title = APP_TITLE
     page.rtl = True
     page.theme_mode = ft.ThemeMode.LIGHT
     page.bgcolor = BACKGROUND
