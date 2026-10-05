@@ -254,6 +254,10 @@ def build_home_view(page: ft.Page, state: AppState) -> ft.View:
                         start_change_word,
                     ),
                     *footer,
+                    ft.Container(height=16),
+                    # required attribution: some word-game clues are adapted
+                    # from ויקימילון definitions (CC BY-SA)
+                    rtl_text("חלק מההגדרות מבוססות על ויקימילון (CC BY-SA)", size=11, color=TEXT_SECONDARY),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 alignment=ft.MainAxisAlignment.CENTER,

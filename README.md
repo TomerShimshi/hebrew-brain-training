@@ -76,3 +76,27 @@ APK_PASSWORD=yourpassword ./docker/build_aab.sh
 
 Output lands at `build/aab/app.aab`, ready to upload to Google Play Console
 (Testing → Internal testing → Create new release).
+
+## Word banks and sources
+
+The word games' banks live in `src/simon/data/`. New words are added
+deterministically from a real Hebrew dictionary:
+
+- **ויקימילון** (Hebrew Wiktionary, https://he.wiktionary.org), licensed
+  [CC BY-SA](https://creativecommons.org/licenses/by-sa/4.0/): every new
+  word must exist in it, and its clue is written from the dictionary's
+  definition. The original definition is stored with each word
+  (`"definition"` in the riddle-pair files, `scramble_sources.json` for
+  topic words). Some clues are adapted from these definitions, so the app
+  credits ויקימילון on its home screen.
+- **FrequencyWords** (OpenSubtitles Hebrew list): how common a word is,
+  which sets its level (regular vs. advanced).
+
+Tooling (offline; downloads go to the git-ignored `scripts/.cache/`):
+
+```
+python scripts/find_word_candidates.py           # candidate reports
+python scripts/find_word_candidates.py --check   # bank words the dictionary doesn't confirm
+python scripts/import_dictionary_pairs.py FILE        # add riddle pairs (validated)
+python scripts/import_dictionary_topic_words.py FILE  # add topic words (validated)
+```

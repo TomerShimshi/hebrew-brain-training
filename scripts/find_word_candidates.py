@@ -1,160 +1,148 @@
-"""One-off, offline helper for growing the scrambled-words and change-a-word
-banks. Not run at app runtime and not unit tested (like
-generate_subword_bank.py).
+"""Offline helper for growing the scrambled-words and change-a-word banks
+deterministically from a real Hebrew dictionary. Not run at app runtime and
+not unit tested (like generate_subword_bank.py).
 
-It only *suggests* candidates -- a person still picks the familiar ones and
-writes the Hebrew clues, since the dictionary only has English glosses and
-clues for this audience need a human touch. Two sources, both downloaded
-into scripts/.cache/ (git-ignored):
+Sources (downloaded into the git-ignored scripts/.cache):
+- ויקימילון (Hebrew Wiktionary, CC BY-SA), parsed by hebrew_wiktionary.py:
+  confirms a word exists and supplies its Hebrew definitions and topic
+  categories;
+- the FrequencyWords Hebrew list (OpenSubtitles): how common a word is,
+  which decides its level -- regular for everyday words, advanced for
+  less common ones. Words missing from the list are too rare to use.
 
-- kaikki.org's Hebrew Wiktionary extract: confirms a word is a real
-  dictionary entry, and supplies English glosses and topic categories;
-- the FrequencyWords Hebrew list (OpenSubtitles): ranks how common a word
-  is, so rare or archaic entries can be filtered out.
-
-Writes two reports:
-- anagram_candidates.txt: groups of 2+ common words spelled with the same
-  letters (candidate change-a-word pairs), skipping words already used;
-- category_candidates.txt: common words per Wiktionary topic category
-  (candidate scrambled-words entries), skipping words already used.
+Reports (in scripts/.cache):
+- anagram_candidates.txt: groups of 2+ dictionary words spelled with the
+  same letters, not yet in any change-a-word bank, by level;
+- category_candidates.txt: dictionary words per topic category, not yet in
+  the scrambled-words bank, by level.
+Each candidate is listed with its frequency rank and dictionary
+definition, so clues are written from the dictionary's meaning.
 
 Usage:
-    python scripts/find_word_candidates.py [--max-rank 20000]
+    python scripts/find_word_candidates.py            # write both reports
+    python scripts/find_word_candidates.py --check    # list bank words the dictionary doesn't confirm
 """
 
 import argparse
 import collections
 import json
 import sys
-import unicodedata
 import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from simon.hebrew_letters import to_base_form  # noqa: E402
+from hebrew_wiktionary import load_lookup  # noqa: E402
+from simon.hebrew_letters import FINAL_TO_BASE, to_base_form  # noqa: E402
 
 CACHE_DIR = Path(__file__).resolve().parent / ".cache"
 DATA_DIR = Path(__file__).resolve().parents[1] / "src" / "simon" / "data"
-KAIKKI_URL = "https://kaikki.org/dictionary/Hebrew/kaikki.org-dictionary-Hebrew.jsonl"
 FREQ_URL = "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/he/he_50k.txt"
 
-HEBREW_LETTERS = set("אבגדהוזחטיכלמנסעפצקרשתךםןףץ")
-FINAL_LETTERS = set("ךםןףץ")
-POS = {"noun", "adj", "verb", "adv", "num"}
 MIN_LEN, MAX_LEN = 3, 6
-
-# Wiktionary topic categories worth mining for the scrambled-words game.
-CATEGORIES = [
-    "Fruits", "Vegetables", "Foods", "Breads", "Anatomy", "Face", "Hair",
-    "Occupations", "Clothing", "Headwear", "Tools", "Furniture", "Rooms",
-    "Buildings", "Containers", "Vehicles", "Watercraft", "Birds",
-    "Baby animals", "Trees", "Flowers", "Plants", "Colors", "Landforms",
-    "Bodies of water", "Sports", "Music", "Holidays", "Time", "Months",
-    "Light sources", "Liquids", "Weather", "Male family members",
-    "Female family members",
-]
+# frequency rank (1 = most common) at which a word moves from regular to advanced
+REGULAR_MAX_RANK = 12000
+ADVANCED_MAX_RANK = 50000
 
 
-def _fetch(url: str, dest: Path) -> Path:
-    if not dest.exists():
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        print(f"Downloading {url} -> {dest}")
-        urllib.request.urlretrieve(url, dest)
-    return dest
-
-
-def _is_playable(word: str) -> bool:
-    return (
-        MIN_LEN <= len(word) <= MAX_LEN
-        and all(ch in HEBREW_LETTERS for ch in word)
-        and not set(word[:-1]) & FINAL_LETTERS
-    )
-
-
-def load_frequency_ranks(path: Path) -> dict[str, int]:
+def load_frequency_ranks() -> dict[str, int]:
+    path = CACHE_DIR / "he_50k.txt"
+    if not path.exists():
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        urllib.request.urlretrieve(FREQ_URL, path)
     ranks = {}
     for rank, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-        word = line.split(" ")[0]
-        ranks.setdefault(word, rank)
+        ranks.setdefault(line.split(" ")[0], rank)
     return ranks
 
 
-def load_dictionary(path: Path) -> dict[str, dict]:
-    """word -> {"glosses": [...], "categories": {...}} for playable,
-    single-word entries of the parts of speech in POS."""
-    entries: dict[str, dict] = {}
-    with path.open(encoding="utf-8") as f:
-        for line in f:
-            e = json.loads(line)
-            word = "".join(ch for ch in e.get("word", "") if not unicodedata.combining(ch))
-            if e.get("pos") not in POS or not _is_playable(word):
-                continue
-            entry = entries.setdefault(word, {"glosses": [], "categories": set()})
-            for sense in e.get("senses", []):
-                entry["glosses"].extend(sense.get("glosses", [])[:1])
-                for c in sense.get("categories", []):
-                    if isinstance(c, dict):
-                        entry["categories"].add(c["name"])
-    return entries
+def level_for(rank: int | None) -> str | None:
+    if rank is None or rank > ADVANCED_MAX_RANK:
+        return None
+    return "regular" if rank <= REGULAR_MAX_RANK else "advanced"
 
 
-def used_words() -> tuple[set[str], set[str]]:
+def is_playable(word: str) -> bool:
+    return MIN_LEN <= len(word) <= MAX_LEN and not set(word[:-1]) & set(FINAL_TO_BASE) and len(set(word)) >= 2
+
+
+def bank_words() -> tuple[dict[str, set[str]], set[str]]:
+    """(topic -> words already in that topic at any level, words in any riddle pair)"""
     scramble = json.loads((DATA_DIR / "scramble_categories.json").read_text(encoding="utf-8"))
-    pairs = json.loads((DATA_DIR / "change_word_pairs.json").read_text(encoding="utf-8"))
-    scramble_words = {w for info in scramble.values() for w in info["words"]}
-    pair_words = {entry["word"] for pair in pairs for entry in pair}
-    return scramble_words, pair_words
+    topics = {name: set(info["words"]) | set(info.get("advanced", {})) for name, info in scramble.items()}
+    pair_words = set()
+    for name in ("change_word_pairs.json", "change_word_pairs_advanced.json"):
+        for pair in json.loads((DATA_DIR / name).read_text(encoding="utf-8")):
+            pair_words.update(entry["word"] for entry in pair)
+    return topics, pair_words
 
 
-def _gloss(entry: dict) -> str:
-    return "; ".join(dict.fromkeys(entry["glosses"]))[:90]
+def _describe(word: str, lookup, ranks) -> str:
+    definition = lookup[word]["definitions"][0][:110]
+    return f"{word} (#{ranks[word]}: {definition})"
 
 
-def write_anagram_report(dictionary, ranks, max_rank, exclude, out: Path) -> int:
-    groups: dict[str, list[str]] = collections.defaultdict(list)
-    for word in dictionary:
-        if ranks.get(word, 10**9) <= max_rank and word not in exclude:
+def write_anagram_report(lookup, ranks, used: set[str]) -> int:
+    groups = collections.defaultdict(list)
+    for word in lookup:
+        if is_playable(word) and word not in used and level_for(ranks.get(word)):
             groups["".join(sorted(to_base_form(word)))].append(word)
-    found = [sorted(ws, key=lambda w: ranks[w]) for ws in groups.values() if len(ws) >= 2]
-    # most familiar first: rank a group by its *least* common member
-    found.sort(key=lambda ws: max(ranks[w] for w in ws))
+    found = {"regular": [], "advanced": []}
+    for words in groups.values():
+        if len(words) >= 2:
+            words.sort(key=lambda w: ranks[w])
+            found[level_for(max(ranks[w] for w in words))].append(words)
+    out = CACHE_DIR / "anagram_candidates.txt"
     with out.open("w", encoding="utf-8") as f:
-        for ws in found:
-            f.write("  |  ".join(f"{w} (#{ranks[w]}: {_gloss(dictionary[w])})" for w in ws) + "\n")
-    return len(found)
+        for level, groups_at_level in found.items():
+            groups_at_level.sort(key=lambda ws: max(ranks[w] for w in ws))
+            f.write(f"===== {level} ({len(groups_at_level)} groups)\n")
+            for words in groups_at_level:
+                f.write("  |  ".join(_describe(w, lookup, ranks) for w in words) + "\n")
+    return sum(len(g) for g in found.values())
 
 
-def write_category_report(dictionary, ranks, max_rank, exclude, out: Path) -> int:
+def write_category_report(lookup, ranks, topics: dict[str, set[str]]) -> int:
+    in_any_topic = set().union(*topics.values())
+    by_category = collections.defaultdict(list)
+    for word, entry in lookup.items():
+        if is_playable(word) and word not in in_any_topic and level_for(ranks.get(word)):
+            for category in entry["categories"]:
+                by_category[category].append(word)
+    out = CACHE_DIR / "category_candidates.txt"
     total = 0
     with out.open("w", encoding="utf-8") as f:
-        for category in CATEGORIES:
-            words = [
-                w for w, e in dictionary.items()
-                if category in e["categories"] and ranks.get(w, 10**9) <= max_rank and w not in exclude
-            ]
+        for category, words in sorted(by_category.items(), key=lambda kv: -len(kv[1])):
+            if len(words) < 3:
+                continue
             words.sort(key=lambda w: ranks[w])
             total += len(words)
             f.write(f"== {category} ({len(words)})\n")
             for w in words:
-                f.write(f"  {w} (#{ranks[w]}: {_gloss(dictionary[w])})\n")
+                f.write(f"  [{level_for(ranks[w])}] {_describe(w, lookup, ranks)}\n")
     return total
+
+
+def check_banks(lookup, ranks) -> None:
+    topics, pair_words = bank_words()
+    all_words = set().union(*topics.values()) | pair_words
+    missing = sorted(w for w in all_words if w not in lookup)
+    print(f"{len(all_words)} bank words; {len(all_words) - len(missing)} confirmed by ויקימילון")
+    print(f"not in ויקימילון ({len(missing)}):", " ".join(missing))
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--max-rank", type=int, default=20000,
-                        help="only words within this frequency rank (lower = more common)")
+    parser.add_argument("--check", action="store_true", help="list bank words the dictionary doesn't confirm")
     args = parser.parse_args()
-
-    ranks = load_frequency_ranks(_fetch(FREQ_URL, CACHE_DIR / "he_50k.txt"))
-    dictionary = load_dictionary(_fetch(KAIKKI_URL, CACHE_DIR / "kaikki_he_raw.jsonl"))
-    scramble_words, pair_words = used_words()
-
-    n = write_anagram_report(dictionary, ranks, args.max_rank, pair_words, CACHE_DIR / "anagram_candidates.txt")
-    print(f"{n} anagram groups -> {CACHE_DIR / 'anagram_candidates.txt'}")
-    n = write_category_report(dictionary, ranks, args.max_rank, scramble_words, CACHE_DIR / "category_candidates.txt")
-    print(f"{n} category words -> {CACHE_DIR / 'category_candidates.txt'}")
+    lookup, ranks = load_lookup(), load_frequency_ranks()
+    if args.check:
+        check_banks(lookup, ranks)
+        return
+    topics, pair_words = bank_words()
+    print(f"{write_anagram_report(lookup, ranks, pair_words)} anagram groups -> {CACHE_DIR / 'anagram_candidates.txt'}")
+    print(f"{write_category_report(lookup, ranks, topics)} category words -> {CACHE_DIR / 'category_candidates.txt'}")
 
 
 if __name__ == "__main__":
