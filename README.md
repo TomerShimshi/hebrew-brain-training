@@ -100,3 +100,15 @@ python scripts/find_word_candidates.py --check   # bank words the dictionary doe
 python scripts/import_dictionary_pairs.py FILE        # add riddle pairs (validated)
 python scripts/import_dictionary_topic_words.py FILE  # add topic words (validated)
 ```
+
+## License
+
+- **Code:** [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0).
+  You may use, change and share it; if you run a modified version for
+  others -- including as a website -- you must make your modified source
+  available to them under the same license.
+- **Word banks and clues** (`src/simon/data/*.json`):
+  [CC BY-SA 4.0](src/simon/data/LICENSE.md), since some clues are adapted
+  from ויקימילון (CC BY-SA). Share-alike applies to adapted word lists too.
+
+Copyright (C) 2026 Tomer Shimshi

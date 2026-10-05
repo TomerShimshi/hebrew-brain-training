@@ -5,6 +5,7 @@ from simon.ui_helpers import ACCENT, GAME_THEMES, TEXT_SECONDARY, chip_button, r
 from simon.word_levels import LABELS as LEVEL_LABELS
 from simon.word_levels import LEVELS
 
+SOURCE_URL = "https://github.com/TomerShimshi/simon"
 DOT_FILLED = ACCENT
 DOT_EMPTY = "#E3E7F0"
 
@@ -255,8 +256,25 @@ def build_home_view(page: ft.Page, state: AppState) -> ft.View:
                     ),
                     *footer,
                     ft.Container(height=16),
-                    # required attribution: some word-game clues are adapted
-                    # from ויקימילון definitions (CC BY-SA)
+                    # The code is AGPL-3.0, which asks that users of the app
+                    # (including over the web) can get its source -- hence
+                    # the link. Some word-game clues are adapted from
+                    # ויקימילון definitions (CC BY-SA), which needs credit.
+                    rtl_text("קוד פתוח ברישיון AGPL-3.0:", size=11, color=TEXT_SECONDARY),
+                    # the URL is left-to-right, on its own line so mixing it
+                    # with Hebrew doesn't scramble the word order
+                    ft.Text(
+                        spans=[
+                            ft.TextSpan(
+                                SOURCE_URL.removeprefix("https://"),
+                                url=SOURCE_URL,
+                                style=ft.TextStyle(color=ACCENT, decoration=ft.TextDecoration.UNDERLINE),
+                            )
+                        ],
+                        size=11,
+                        rtl=False,
+                        text_align=ft.TextAlign.CENTER,
+                    ),
                     rtl_text("חלק מההגדרות מבוססות על ויקימילון (CC BY-SA)", size=11, color=TEXT_SECONDARY),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
