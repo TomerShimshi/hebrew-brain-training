@@ -5,7 +5,7 @@ from simon.ui_helpers import ACCENT, GAME_THEMES, TEXT_SECONDARY, chip_button, r
 from simon.word_levels import LABELS as LEVEL_LABELS
 from simon.word_levels import LEVELS
 
-SOURCE_URL = "https://github.com/TomerShimshi/simon"
+SOURCE_URL = "https://github.com/TomerShimshi/hebrew-brain-training"
 DOT_FILLED = ACCENT
 DOT_EMPTY = "#E3E7F0"
 

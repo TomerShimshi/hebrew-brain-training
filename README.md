@@ -1,4 +1,18 @@
-this project is a Simon color-sequence memory game to help a stroke survivor practice memory, in Hebrew
+# hebrew-brain-training · משחקי אימון
+
+Free, ad-free Hebrew brain-training games for people recovering from a
+stroke, especially those whose speech was affected (aphasia). They practice
+word finding, memory and reaction time:
+
+- **סיימון** – remember and repeat color sequences
+- **זיכרון קלפים** – find matching card pairs
+- **בניית מילים** – find words hidden inside a word
+- **מילים מבולגנות** – unscramble letters into a word, by topic
+- **שינוי מילים** – rearrange one word's letters into a new word, from two clues
+
+The word games have a regular and an advanced level. The app runs in the
+browser (phone or computer) as a family app with saved progress per person,
+and as a public version where nothing is saved.
 
 ## Run locally
 
