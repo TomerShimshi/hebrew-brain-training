@@ -14,6 +14,19 @@ The word games have a regular and an advanced level. The app runs in the
 browser (phone or computer) as a family app with saved progress per person,
 and as a public version where nothing is saved.
 
+## Try it
+
+**👉 https://simon-public.onrender.com**
+
+Free, no ads, no sign-up, nothing to install -- it runs in the browser on a
+phone or a computer.
+
+⏳ **The first load can take up to a minute.** The app runs on a free
+server that goes to sleep when nobody is using it, and wakes up on the next
+visit. After that first load it's quick.
+
+Source code: https://github.com/TomerShimshi/hebrew-brain-training
+
 ## Run locally
 
 ```
