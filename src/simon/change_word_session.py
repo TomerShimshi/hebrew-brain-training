@@ -1,6 +1,8 @@
 import random
 
 from simon.freshness import freshness_order
+from simon.hebrew_letters import to_base_form
+from simon.letter_puzzle import LetterPuzzle
 from simon.storage import new_session_id
 from simon.typed_puzzle import TypedPuzzle
 from simon.word_levels import REGULAR
@@ -16,16 +18,17 @@ def pair_key(word_a: str, word_b: str) -> str:
 
 class ChangeWordSession:
     """Drives one change-a-word session. Each round is a pair of words
-    spelled with the same letters, and both are typed from memory on a
-    full keyboard, so no letters are ever handed to the player:
+    spelled with the same letters, played in two stages:
 
-    1. from the first word's definition, recall and type it
-       (e.g. "מטפל בחולים" -> רופא);
-    2. from a new definition, rearrange that word's letters in your head
-       and type the new word ("צבע בין שחור ללבן" -> אפור).
+    1. from the first word's definition, recall it and type it on a full
+       keyboard -- no letters handed over (e.g. "מטפל בחולים" -> רופא);
+    2. from a new definition, rearrange that word's letters into the new
+       word ("צבע בין שחור ללבן" -> אפור), by tapping them as letter tiles
+       (a LetterPuzzle, like the scrambled-words game) -- offering only
+       those letters keeps the task about rearranging, which a full
+       keyboard here made confusing.
 
-    That mental rearranging -- holding a word in working memory and
-    manipulating its letters -- is the point of the drill. Each word also
+    Each word also
     has an extra clue available as a hint. Riddles the player hasn't seen
     come first, and each is played in a random direction. UI-independent
     and seedable for testing.
@@ -52,7 +55,7 @@ class ChangeWordSession:
         self._rounds = [self._rng.sample(pair, 2) for pair in chosen]
         self._index = -1
         self._first_puzzles: list[TypedPuzzle] = []
-        self._second_puzzles: list[TypedPuzzle] = []
+        self._second_puzzles: list[LetterPuzzle] = []
         self._extra_clues_shown = 0
         self.next_pair()
 
@@ -73,9 +76,9 @@ class ChangeWordSession:
     def current(self) -> dict:
         return self.first if self.stage == 1 else self.second
 
-    def _start(self, entry: dict, puzzles: list[TypedPuzzle]) -> None:
-        self.puzzle = TypedPuzzle(entry["word"])
-        puzzles.append(self.puzzle)
+    def _start(self, puzzle: TypedPuzzle | LetterPuzzle, puzzles: list) -> None:
+        self.puzzle = puzzle
+        puzzles.append(puzzle)
         self.extra_clue_shown = False
 
     def show_extra_clue(self) -> str:
@@ -88,12 +91,14 @@ class ChangeWordSession:
 
     def next_stage(self) -> None:
         if self.stage == 1 and self.puzzle.done:
-            self._start(self.second, self._second_puzzles)
+            # the first word's letters as tiles, in that word's order
+            tiles = list(to_base_form(self.first["word"]))
+            self._start(LetterPuzzle(self.second["word"], tiles), self._second_puzzles)
 
     def next_pair(self) -> None:
         if self.has_next_pair:
             self._index += 1
-            self._start(self.first, self._first_puzzles)
+            self._start(TypedPuzzle(self.first["word"]), self._first_puzzles)
 
     @property
     def round_done(self) -> bool:

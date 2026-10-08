@@ -1,6 +1,7 @@
 import random
 
 from simon.change_word_session import ChangeWordSession
+from simon.hebrew_letters import to_base_form
 from simon.letter_puzzle import GuessResult
 
 PAIRS = [
@@ -23,6 +24,16 @@ def _session(seed=0, pair_count=3):
     return ChangeWordSession(PAIRS, rng=random.Random(seed), pair_count=pair_count)
 
 
+def _tap(session, word):
+    """Stage 2: taps the tiles that spell `word`."""
+    used = []
+    for letter in to_base_form(word):
+        index = next(i for i, tile in enumerate(session.puzzle.tiles) if tile == letter and i not in used)
+        used.append(index)
+        session.puzzle.tap_tile(index)
+    return session.puzzle.check_attempt()
+
+
 def _type(session, word):
     for letter in word:
         session.puzzle.type_letter(letter)
@@ -43,28 +54,30 @@ def test_cannot_move_on_before_finding_the_first_word():
     assert session.stage == 1
 
 
-def test_stage_two_asks_for_the_second_word_from_scratch():
+def test_stage_two_gives_the_first_words_letters_as_tiles():
     session = _session()
     assert _type(session, session.first["word"]) == GuessResult.CORRECT
     session.next_stage()
     assert session.stage == 2
     assert session.current is session.second
     assert session.puzzle.answer == session.second["word"]
-    assert session.puzzle.typed == []
+    # only the first word's letters, in its order, nothing placed yet
+    assert session.puzzle.tiles == list(to_base_form(session.first["word"]))
+    assert session.puzzle.current_attempt == []
 
 
-def test_typing_the_first_word_again_in_stage_two_is_wrong():
+def test_spelling_the_first_word_again_in_stage_two_is_wrong():
     session = _session()
     _type(session, session.first["word"])
     session.next_stage()
-    assert _type(session, session.first["word"]) == GuessResult.WRONG
+    assert _tap(session, session.first["word"]) == GuessResult.WRONG
 
 
 def test_full_round_counts_and_moves_to_next_pair():
     session = _session()
     _type(session, session.first["word"])
     session.next_stage()
-    _type(session, session.second["word"])
+    _tap(session, session.second["word"])
     assert session.round_done
     assert session.first_words_solved == 1
     assert session.changes_solved == 1

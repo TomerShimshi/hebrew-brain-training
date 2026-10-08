@@ -4,6 +4,7 @@ from simon.app_state import AppState
 from simon.change_word_session import ChangeWordSession
 from simon.letter_puzzle import GuessResult
 from simon.screens.hebrew_keyboard import hebrew_keyboard
+from simon.screens.letter_board import LetterBoard
 from simon.ui_helpers import GAME_THEMES, TEXT_SECONDARY, chip_button, content_width, game_header, primary_button, rtl_text
 from simon.word_levels import ADVANCED
 from simon.word_levels import LABELS as LEVEL_LABELS
@@ -11,7 +12,11 @@ from simon.word_levels import LABELS as LEVEL_LABELS
 THEME = GAME_THEMES["change_word"]
 SLOT_EMPTY_COLOR = "#FFFFFF"
 SLOT_SOLVED_COLOR = "#D3F9D8"
-FEEDBACK_WRONG = "כמעט! נסו מילה אחרת (אפשר למחוק עם ⌫)"
+TILE_USED_COLOR = "#F3B6CB"
+FEEDBACK_WRONG = {
+    1: "כמעט! נסו מילה אחרת (אפשר למחוק עם ⌫)",
+    2: "כמעט! נסו לסדר אחרת (אפשר ללחוץ על \"ביטול\")",
+}
 
 
 def build_change_word_game_view(page: ft.Page, state: AppState) -> ft.View:
@@ -84,14 +89,24 @@ def build_change_word_game_view(page: ft.Page, state: AppState) -> ft.View:
         extra_clue_label.value = f"\U0001f4a1 {session.current['hint']}"
         extra_clue_label.visible = session.extra_clue_shown
 
-        for slot, letter in zip(slot_row.controls, puzzle.slot_letters()):
-            slot.content.value = letter
-            if puzzle.solved:
-                slot.bgcolor = SLOT_SOLVED_COLOR
-            elif puzzle.revealed:
-                slot.bgcolor = THEME["light"]
-            else:
-                slot.bgcolor = SLOT_EMPTY_COLOR
+        # stage 1: typed into slots on the full keyboard; stage 2: the first
+        # word's letters as tiles (the scrambled-words board)
+        typing = session.stage == 1
+        slot_area.visible = typing
+        keyboard.visible = typing
+        board.control.visible = not typing
+        undo_button.visible = not typing
+        if typing:
+            for slot, letter in zip(slot_row.controls, puzzle.slot_letters()):
+                slot.content.value = letter
+                if puzzle.solved:
+                    slot.bgcolor = SLOT_SOLVED_COLOR
+                elif puzzle.revealed:
+                    slot.bgcolor = THEME["light"]
+                else:
+                    slot.bgcolor = SLOT_EMPTY_COLOR
+        else:
+            board.render()
 
         playing_controls.visible = not puzzle.done
         next_button.visible = puzzle.done
@@ -110,7 +125,7 @@ def build_change_word_game_view(page: ft.Page, state: AppState) -> ft.View:
                 feedback_label.value = "כל הכבוד! מצאת את המילה החדשה \U0001f389"
             save_progress()
         elif result == GuessResult.WRONG:
-            feedback_label.value = FEEDBACK_WRONG
+            feedback_label.value = FEEDBACK_WRONG[session.stage]
         else:
             feedback_label.value = ""
 
@@ -123,10 +138,18 @@ def build_change_word_game_view(page: ft.Page, state: AppState) -> ft.View:
         show_result(session.puzzle.check_attempt())
         refresh()
 
+    def on_tile_tap(result: GuessResult) -> None:
+        # the board has already placed the tile; it updates the page itself
+        show_result(result)
+        render_all()
+
     def on_backspace() -> None:
         session.puzzle.backspace()
         feedback_label.value = ""
         refresh()
+
+    async def undo(_: ft.ControlEvent) -> None:
+        on_backspace()
 
     async def clear(_: ft.ControlEvent) -> None:
         session.puzzle.clear()
@@ -173,7 +196,10 @@ def build_change_word_game_view(page: ft.Page, state: AppState) -> ft.View:
         else:
             await finish_session(e)
             return
-        build_slots()
+        if session.stage == 1:
+            build_slots()
+        else:
+            board.set_puzzle(session.puzzle)
         feedback_label.value = ""
         refresh()
 
@@ -181,12 +207,18 @@ def build_change_word_game_view(page: ft.Page, state: AppState) -> ft.View:
         state.change_word_session = None
         await page.push_route("/")
 
+    keyboard = hebrew_keyboard(on_letter, on_backspace, THEME["accent"], width)
+    board = LetterBoard(page, THEME["accent"], THEME["light"], TILE_USED_COLOR, on_tile_tap)
+    slot_area = ft.Container(content=slot_row, padding=ft.Padding(0, 4, 0, 0))
+    undo_button = chip_button("ביטול", undo, THEME["accent"])
+
     playing_controls = ft.Column(
         [
-            hebrew_keyboard(on_letter, on_backspace, THEME["accent"], width),
+            keyboard,
             ft.Container(height=4),
             ft.Row(
                 [
+                    undo_button,
                     chip_button("נקה", clear, THEME["accent"]),
                     chip_button("רמז נוסף", extra_clue, THEME["accent"]),
                     chip_button("רמז: אות", hint_letter, THEME["accent"]),
@@ -201,7 +233,10 @@ def build_change_word_game_view(page: ft.Page, state: AppState) -> ft.View:
     )
     next_button = primary_button("", next_step, THEME["accent"])
 
-    build_slots()
+    if session.stage == 1:
+        build_slots()
+    else:
+        board.set_puzzle(session.puzzle)
     render_all()
 
     return ft.View(
@@ -214,7 +249,8 @@ def build_change_word_game_view(page: ft.Page, state: AppState) -> ft.View:
                     riddle_box,
                     stage_label,
                     extra_clue_label,
-                    ft.Container(content=slot_row, padding=ft.Padding(0, 4, 0, 0)),
+                    slot_area,
+                    board.control,
                     feedback_label,
                     playing_controls,
                     next_button,

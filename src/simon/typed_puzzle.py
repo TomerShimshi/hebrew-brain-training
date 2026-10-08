@@ -5,7 +5,7 @@ from simon.letter_puzzle import GuessResult
 class TypedPuzzle:
     """One word to type from memory on a full Hebrew keyboard -- unlike
     LetterPuzzle, no letters are handed to the player, so the word has to
-    be recalled (and, in change-a-word, mentally rearranged) unaided.
+    be recalled unaided (the change-a-word game's first stage).
 
     Letters are compared in non-final form, so typing מ or ם at the end
     of a word is equally correct. The answer's length is shown as slots,

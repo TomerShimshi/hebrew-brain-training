@@ -58,6 +58,10 @@ class LetterPuzzle:
         if not self.done:
             self.current_attempt = []
 
+    # the same editing names as TypedPuzzle, so a screen can drive either
+    backspace = undo_last
+    clear = clear_attempt
+
     def is_attempt_full(self) -> bool:
         return len(self.current_attempt) == len(self.tiles)
 
