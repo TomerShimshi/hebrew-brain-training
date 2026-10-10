@@ -5,6 +5,7 @@ from simon.change_word_session import ChangeWordSession
 from simon.letter_puzzle import GuessResult
 from simon.screens.hebrew_keyboard import hebrew_keyboard
 from simon.screens.letter_board import LetterBoard
+from simon.screens.level_suggestion import current_offer, decline, level_suggestion_card, show_view
 from simon.ui_helpers import GAME_THEMES, TEXT_SECONDARY, chip_button, content_width, game_header, primary_button, rtl_text
 from simon.word_levels import ADVANCED
 from simon.word_levels import LABELS as LEVEL_LABELS
@@ -116,6 +117,39 @@ def build_change_word_game_view(page: ft.Page, state: AppState) -> ft.View:
             next_button.content.value = "הזוג הבא"
         else:
             next_button.content.value = "לסיכום"
+        render_suggestion()
+
+    # the "move up / move down a level?" card -- shown after a finished
+    # riddle, never mid-riddle, and the game carries on if it's ignored
+    suggestion_slot = ft.Container(visible=False)
+    shown_offer = {"key": None}
+
+    def render_suggestion() -> None:
+        offer = current_offer(state, session)
+        key = (offer, session.clean_streak)  # rebuild when the streak in the text grows
+        if key != shown_offer["key"]:
+            shown_offer["key"] = key
+            if offer:
+                suggestion_slot.content = level_suggestion_card(
+                    offer, session.clean_streak, "חידות", THEME["accent"], THEME["light"],
+                    accept_suggestion, decline_suggestion,
+                )
+        suggestion_slot.visible = offer is not None
+
+    async def accept_suggestion(_: ft.ControlEvent) -> None:
+        offer = current_offer(state, session)
+        if offer is None:
+            return
+        save_progress()
+        state.settings.word_level = offer.target_level
+        # a fresh game at the new level (the screen builds it from the setting)
+        state.change_word_session = None
+        show_view(page, build_change_word_game_view(page, state))
+
+    async def decline_suggestion(_: ft.ControlEvent) -> None:
+        decline(state, session)
+        render_all()
+        page.update()
 
     def show_result(result: GuessResult) -> None:
         if result == GuessResult.CORRECT:
@@ -252,6 +286,7 @@ def build_change_word_game_view(page: ft.Page, state: AppState) -> ft.View:
                     slot_area,
                     board.control,
                     feedback_label,
+                    suggestion_slot,
                     playing_controls,
                     next_button,
                 ],

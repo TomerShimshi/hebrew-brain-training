@@ -2,10 +2,13 @@ import flet as ft
 
 from simon.app_state import AppState
 from simon.letter_puzzle import GuessResult
+from simon.scramble_session import ScrambleSession
 from simon.screens.letter_board import LetterBoard
+from simon.screens.level_suggestion import current_offer, decline, level_suggestion_card, show_view
 from simon.ui_helpers import GAME_THEMES, chip_button, game_header, primary_button, rtl_text
 from simon.word_levels import ADVANCED
 from simon.word_levels import LABELS as LEVEL_LABELS
+from simon.word_levels import topic_words
 
 THEME = GAME_THEMES["scramble"]
 TILE_USED_COLOR = "#C9BCF5"
@@ -45,6 +48,50 @@ def build_scramble_game_view(page: ft.Page, state: AppState) -> ft.View:
         playing_controls.visible = not session.puzzle.done
         next_button.visible = session.puzzle.done
         next_button.content.value = "המילה הבאה" if session.has_next_word else "לסיכום"
+        render_suggestion()
+
+    # the "move up / move down a level?" card -- shown after a finished word,
+    # never mid-word, and the game carries on if it's ignored
+    suggestion_slot = ft.Container(visible=False)
+    shown_offer = {"key": None}
+
+    def offer_now():
+        offer = current_offer(state, session)
+        topic = state.scramble_categories[session.category]
+        return offer if offer and topic_words(topic, offer.target_level) else None
+
+    def render_suggestion() -> None:
+        offer = offer_now()
+        key = (offer, session.clean_streak)  # rebuild when the streak in the text grows
+        if key != shown_offer["key"]:
+            shown_offer["key"] = key
+            if offer:
+                suggestion_slot.content = level_suggestion_card(
+                    offer, session.clean_streak, "מילים", THEME["accent"], THEME["light"],
+                    accept_suggestion, decline_suggestion,
+                )
+        suggestion_slot.visible = offer is not None
+
+    async def accept_suggestion(_: ft.ControlEvent) -> None:
+        offer = offer_now()
+        if offer is None:
+            return
+        save_progress()
+        level = offer.target_level
+        state.settings.word_level = level
+        # a fresh game in the same topic at the new level
+        state.scramble_session = ScrambleSession(
+            session.category,
+            topic_words(state.scramble_categories[session.category], level),
+            seen_history=state.scramble_progress.seen_history(),
+            level=level,
+        )
+        show_view(page, build_scramble_game_view(page, state))
+
+    async def decline_suggestion(_: ft.ControlEvent) -> None:
+        decline(state, session)
+        render_all()
+        page.update()
 
     def show_result(result: GuessResult) -> None:
         if result == GuessResult.CORRECT:
@@ -161,6 +208,7 @@ def build_scramble_game_view(page: ft.Page, state: AppState) -> ft.View:
                     clue_box,
                     board.control,
                     feedback_label,
+                    suggestion_slot,
                     playing_controls,
                     next_button,
                 ],

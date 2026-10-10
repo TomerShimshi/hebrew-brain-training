@@ -1,5 +1,6 @@
 import random
 
+from simon import level_suggestions
 from simon.freshness import freshness_order
 from simon.letter_puzzle import LetterPuzzle, scramble_letters
 from simon.storage import new_session_id
@@ -36,6 +37,7 @@ class ScrambleSession:
         self._queue = freshness_order(list(words), seen_history or [], self._rng)
         self._puzzles: list[LetterPuzzle] = []
         self._clues_shown = 0
+        self.suggestion_dismissed = False
         self._advance()
 
     def _advance(self) -> None:
@@ -83,6 +85,22 @@ class ScrambleSession:
     @property
     def clue(self) -> str:
         return self._clues[self.answer]
+
+    @property
+    def outcomes(self) -> list[level_suggestions.Outcome]:
+        """How each finished word went, in order (see level_suggestions)."""
+        return [level_suggestions.classify(p) for p in self._puzzles if p.done]
+
+    @property
+    def clean_streak(self) -> int:
+        return level_suggestions.clean_streak(self.outcomes)
+
+    def level_suggestion(self) -> level_suggestions.Suggestion | None:
+        """Whether to offer a change of level now -- nothing once the player
+        said "not now" in this game."""
+        if self.suggestion_dismissed:
+            return None
+        return level_suggestions.suggest(self.level, self.outcomes, level_suggestions.SCRAMBLE)
 
     def get_clue(self) -> str:
         """The current word's definition. Counts as a hint the first time

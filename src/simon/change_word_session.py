@@ -1,5 +1,6 @@
 import random
 
+from simon import level_suggestions
 from simon.freshness import freshness_order
 from simon.hebrew_letters import to_base_form
 from simon.letter_puzzle import LetterPuzzle
@@ -57,6 +58,7 @@ class ChangeWordSession:
         self._first_puzzles: list[TypedPuzzle] = []
         self._second_puzzles: list[LetterPuzzle] = []
         self._extra_clues_shown = 0
+        self.suggestion_dismissed = False
         self.next_pair()
 
     @property
@@ -120,6 +122,27 @@ class ChangeWordSession:
     @property
     def pairs_shown(self) -> list[str]:
         return [f"{a['word']}>{b['word']}" for a, b in self._rounds[: self._index + 1]]
+
+    @property
+    def outcomes(self) -> list[level_suggestions.Outcome]:
+        """How each finished riddle went (both stages; the harder of the two
+        counts), in order -- see level_suggestions."""
+        return [
+            level_suggestions.worst(level_suggestions.classify(first), level_suggestions.classify(second))
+            for first, second in zip(self._first_puzzles, self._second_puzzles)
+            if second.done
+        ]
+
+    @property
+    def clean_streak(self) -> int:
+        return level_suggestions.clean_streak(self.outcomes)
+
+    def level_suggestion(self) -> level_suggestions.Suggestion | None:
+        """Whether to offer a change of level now -- nothing once the player
+        said "not now" in this game."""
+        if self.suggestion_dismissed:
+            return None
+        return level_suggestions.suggest(self.level, self.outcomes, level_suggestions.CHANGE_WORD)
 
     @property
     def changes_solved(self) -> int:

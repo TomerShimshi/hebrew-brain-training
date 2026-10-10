@@ -1,6 +1,7 @@
 import flet as ft
 
 from simon.app_state import AppState
+from simon.screens.level_suggestion import current_offer, decline, level_suggestion_card
 from simon.ui_helpers import GAME_THEMES, chip_button, primary_button, rtl_text
 
 THEME = GAME_THEMES["change_word"]
@@ -17,6 +18,25 @@ def build_change_word_summary_view(page: ft.Page, state: AppState) -> ft.View:
     async def play_again(_: ft.ControlEvent) -> None:
         state.change_word_session = None
         await page.push_route("/change")
+
+    # the game may end right when a level change is due -- offer it here too
+    offer = current_offer(state, session) if session else None
+    suggestion_slot = ft.Container(visible=offer is not None)
+
+    async def accept_suggestion(_: ft.ControlEvent) -> None:
+        state.settings.word_level = offer.target_level
+        state.change_word_session = None  # /change builds a new game at the new level
+        await page.push_route("/change")
+
+    async def decline_suggestion(_: ft.ControlEvent) -> None:
+        decline(state, session)
+        suggestion_slot.visible = False
+        page.update()
+
+    if offer:
+        suggestion_slot.content = level_suggestion_card(
+            offer, session.clean_streak, "חידות", THEME["accent"], THEME["light"], accept_suggestion, decline_suggestion
+        )
 
     async def go_home(_: ft.ControlEvent) -> None:
         state.change_word_session = None
@@ -38,7 +58,9 @@ def build_change_word_summary_view(page: ft.Page, state: AppState) -> ft.View:
                     ft.Container(height=8),
                     rtl_text(f"השיא שלך: {best}", size=18) if best and not state.public else ft.Container(),
                     rtl_text(f"רמזים שנעשה בהם שימוש: {hints_used}", size=14) if hints_used else ft.Container(),
-                    ft.Container(height=32),
+                    ft.Container(height=16),
+                    suggestion_slot,
+                    ft.Container(height=16),
                     primary_button("משחק חדש", play_again, THEME["accent"]),
                     ft.Container(height=12),
                     chip_button("חזרה לתפריט", go_home, THEME["accent"]),

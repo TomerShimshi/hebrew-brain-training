@@ -57,9 +57,15 @@ def load_frequency_ranks() -> dict[str, int]:
     return ranks
 
 
-def level_for(rank: int | None) -> str | None:
+def level_for(rank: int | None, allow_rare: bool = False) -> str | None:
+    """The level a word's frequency rank gives it. A word too rare for the
+    frequency list (rank None or beyond ADVANCED_MAX_RANK) gets no level --
+    unless `allow_rare`, used when importing hand-picked advanced words:
+    a dictionary-confirmed word that's uncommon in everyday speech (אובך,
+    מלקוש) is exactly the vocabulary the advanced level teaches. Candidate
+    reports stay strict so they aren't flooded with archaic words."""
     if rank is None or rank > ADVANCED_MAX_RANK:
-        return None
+        return "advanced" if allow_rare else None
     return "regular" if rank <= REGULAR_MAX_RANK else "advanced"
 
 

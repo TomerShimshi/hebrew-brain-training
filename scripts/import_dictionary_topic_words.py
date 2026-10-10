@@ -4,7 +4,8 @@ deterministically checked against the dictionary:
 
 - every word must exist in ויקימילון and be playable (3-6 letters);
 - each word goes to the level its frequency rank gives it -- the import
-  refuses a word placed at the wrong level;
+  refuses a word placed at the wrong level (a dictionary word too rare for
+  the frequency list counts as advanced; see level_for);
 - the dictionary's first definition of each word is recorded in
   src/simon/data/scramble_sources.json, so every clue can be traced back.
 
@@ -44,8 +45,8 @@ def main(source: Path) -> None:
                     errors.append(f"{topic}/{word}: not in ויקימילון")
                 elif not is_playable(word):
                     errors.append(f"{topic}/{word}: not playable")
-                elif level_for(ranks.get(word)) != level:
-                    errors.append(f"{topic}/{word}: belongs to {level_for(ranks.get(word))}, not {level}")
+                elif level_for(ranks.get(word), allow_rare=True) != level:
+                    errors.append(f"{topic}/{word}: belongs to {level_for(ranks.get(word), allow_rare=True)}, not {level}")
                 if word in existing:
                     errors.append(f"{topic}/{word}: already in the topic")
     if errors:

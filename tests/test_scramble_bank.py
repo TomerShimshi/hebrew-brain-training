@@ -23,10 +23,11 @@ def test_categories_load_with_icon_and_enough_words():
         assert len(info["words"]) >= 8, name
 
 
-def test_advanced_level_has_enough_topics_and_words():
-    topics = [name for name, info in load_categories().items() if topic_words(info, ADVANCED)]
-    assert len(topics) >= 10
-    assert sum(1 for _ in _all_words(ADVANCED)) >= 150
+def test_every_topic_has_enough_words_at_both_levels():
+    # enough for a game, and for the 8-word streak that suggests a level change
+    for name, info in load_categories().items():
+        for level in LEVELS:
+            assert len(topic_words(info, level)) >= 12, (name, level)
 
 
 @pytest.mark.parametrize("level", LEVELS)
