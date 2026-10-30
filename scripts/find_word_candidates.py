@@ -14,7 +14,9 @@ Reports (in scripts/.cache):
 - anagram_candidates.txt: groups of 2+ dictionary words spelled with the
   same letters, not yet in any change-a-word bank, by level;
 - category_candidates.txt: dictionary words per topic category, not yet in
-  the scrambled-words bank, by level.
+  the scrambled-words bank, by level;
+- relation_candidates.txt (--relations): synonym and opposite pairs for
+  the choice games, by level.
 Each candidate is listed with its frequency rank and dictionary
 definition, so clues are written from the dictionary's meaning.
 
@@ -130,6 +132,42 @@ def write_category_report(lookup, ranks, topics: dict[str, set[str]]) -> int:
     return total
 
 
+# categories marking biblical/archaic words or names -- not for everyday play
+ARCHAIC_CATEGORIES = {
+    'מילים יחידאיות בתנ"ך', "מילים מקראיות", "שמות", "דמויות מקראיות", "ארמית",
+    "מילים אוגריתיות", 'לשון חז"ל', "מיניות",
+}
+
+
+def write_relation_report(lookup, ranks) -> int:
+    """Candidate synonym and opposite pairs (see import_dictionary_relations.py):
+    both words common enough to have a level, neither archaic; a pair's
+    level is set by its rarer word."""
+    def usable(word: str) -> bool:
+        entry = lookup.get(word)
+        return bool(entry) and level_for(ranks.get(word)) is not None and not set(entry["categories"]) & ARCHAIC_CATEGORIES
+
+    out = CACHE_DIR / "relation_candidates.txt"
+    total = 0
+    with out.open("w", encoding="utf-8") as f:
+        for kind in ("synonyms", "opposites"):
+            pairs = {}
+            for word, entry in lookup.items():
+                if not usable(word):
+                    continue
+                for other in entry.get(kind, []):
+                    if usable(other):
+                        key = tuple(sorted((word, other)))
+                        pairs[key] = level_for(max(ranks[word], ranks[other]))
+            for level in ("regular", "advanced"):
+                found = sorted((k for k, lv in pairs.items() if lv == level), key=lambda k: max(ranks[w] for w in k))
+                total += len(found)
+                f.write(f"===== {kind} / {level} ({len(found)})\n")
+                for a, b in found:
+                    f.write(f"{a} ~ {b}  |  {a}: {lookup[a]['definitions'][0][:50]}  |  {b}: {lookup[b]['definitions'][0][:50]}\n")
+    return total
+
+
 def check_banks(lookup, ranks) -> None:
     topics, pair_words = bank_words()
     all_words = set().union(*topics.values()) | pair_words
@@ -141,10 +179,15 @@ def check_banks(lookup, ranks) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true", help="list bank words the dictionary doesn't confirm")
+    parser.add_argument("--relations", action="store_true", help="write synonym/opposite pair candidates")
     args = parser.parse_args()
     lookup, ranks = load_lookup(), load_frequency_ranks()
     if args.check:
         check_banks(lookup, ranks)
+        return
+    if args.relations:
+        n = write_relation_report(lookup, ranks)
+        print(f"{n} relation pairs -> {CACHE_DIR / 'relation_candidates.txt'}")
         return
     topics, pair_words = bank_words()
     print(f"{write_anagram_report(lookup, ranks, pair_words)} anagram groups -> {CACHE_DIR / 'anagram_candidates.txt'}")
