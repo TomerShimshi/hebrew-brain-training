@@ -15,7 +15,7 @@ def _bank(name: str) -> list[dict]:
 
 
 @pytest.mark.parametrize("name", BANKS)
-@pytest.mark.parametrize("level,minimum", [("regular", 40), ("advanced", 30)])
+@pytest.mark.parametrize("level,minimum", [("regular", 120), ("advanced", 120)])
 def test_bank_has_enough_entries(name, level, minimum):
     assert sum(entry["level"] == level for entry in _bank(name)) >= minimum
 
