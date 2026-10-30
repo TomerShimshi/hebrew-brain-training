@@ -40,6 +40,8 @@ class Thresholds:
 
 SCRAMBLE = Thresholds(up_streak=8, down_window=4, down_struggles=3)
 CHANGE_WORD = Thresholds(up_streak=5, down_window=3, down_struggles=2)
+# multiple-choice games: CLEAN = right on the first pick, STRUGGLE = third or later
+CHOICE = Thresholds(up_streak=8, down_window=4, down_struggles=3)
 
 # letter hints on one word that make it count as a struggle
 STRUGGLE_HINTS = 2
