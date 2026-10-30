@@ -3,13 +3,18 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
+import functools
+
 import flet as ft
 
 from simon.app_mode import is_public_mode
 from simon.app_state import AppState
 from simon.change_word_bank import load_all_pairs
+from simon.choice_games import CHOICE_GAMES, load_choice_items
 from simon.screens.change_word_game import build_change_word_game_view
 from simon.screens.change_word_summary import build_change_word_summary_view
+from simon.screens.choice_game import build_choice_game_view
+from simon.screens.choice_summary import build_choice_summary_view
 from simon.screens.home import build_home_view
 from simon.screens.memory_game import build_memory_game_view
 from simon.screens.memory_summary import build_memory_summary_view
@@ -42,6 +47,10 @@ ROUTE_BUILDERS = {
     "/change/summary": build_change_word_summary_view,
     "/progress": build_progress_view,
 }
+# the three multiple-choice games share their screens (see choice_games)
+for _game in CHOICE_GAMES.values():
+    ROUTE_BUILDERS[_game.route] = functools.partial(build_choice_game_view, game=_game)
+    ROUTE_BUILDERS[f"{_game.route}/summary"] = functools.partial(build_choice_summary_view, game=_game)
 # Browser tab / window title -- also used for the web page shell (web.py), so
 # the tab names the app even while it's still loading.
 APP_TITLE = "Hebrew Brain Training"
@@ -58,11 +67,13 @@ def main(page: ft.Page) -> None:
     page.window.width = 420
     page.window.height = 780
 
+    categories = load_categories()
     state = AppState(
         subword_bank=load_bank(),
         subword_clues=load_clues(),
-        scramble_categories=load_categories(),
+        scramble_categories=categories,
         change_word_pairs=load_all_pairs(),
+        choice_items=load_choice_items(categories),
     )
 
     def render_current_route(*_args) -> None:

@@ -1,6 +1,7 @@
 import flet as ft
 
 from simon.app_state import AppState
+from simon.choice_games import CHOICE_GAMES
 from simon.ui_helpers import ACCENT, GAME_THEMES, TEXT_SECONDARY, bar_chart, chip_button, rtl_text, soft_shadow
 
 SESSIONS_SHOWN = 10
@@ -135,6 +136,21 @@ def build_progress_view(page: ft.Page, state: AppState) -> ft.View:
                         "מילים ששונו בכל משחק (גבוה יותר = טוב יותר)",
                         higher_is_better=True,
                     ),
+                    *[
+                        control
+                        for game in CHOICE_GAMES.values()
+                        for control in (
+                            ft.Container(height=16),
+                            _game_trend_card(
+                                game.theme_key,
+                                game.title,
+                                state.choice_progress[game.key].recent_sessions(n=SESSIONS_SHOWN),
+                                "first_try_correct",
+                                "תשובות נכונות בניסיון הראשון (גבוה יותר = טוב יותר)",
+                                higher_is_better=True,
+                            ),
+                        )
+                    ],
                     ft.Container(height=24),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,

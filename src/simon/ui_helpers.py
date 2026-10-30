@@ -15,6 +15,9 @@ GAME_THEMES = {
     "subword": {"accent": "#E8590C", "light": "#FDECE1", "icon": "\U0001f524"},
     "scramble": {"accent": "#7048E8", "light": "#EFEAFD", "icon": "\U0001f500"},
     "change_word": {"accent": "#D6336C", "light": "#FCE4EC", "icon": "\U0001f504"},
+    "synonym": {"accent": "#1098AD", "light": "#E3F7FA", "icon": "\U0001f91d"},
+    "opposite": {"accent": "#F08C00", "light": "#FFF4E0", "icon": "↔️"},
+    "definition": {"accent": "#5C940D", "light": "#EEF7E0", "icon": "\U0001f4d6"},
 }
 
 # Unlit / lit pairs per pad -- the lit shade is a brightened version of the

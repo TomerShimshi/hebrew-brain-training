@@ -1,6 +1,7 @@
 import flet as ft
 
 from simon.app_state import AppState
+from simon.choice_games import CHOICE_GAMES, ChoiceGame
 from simon.ui_helpers import ACCENT, GAME_THEMES, TEXT_SECONDARY, chip_button, rtl_text, soft_shadow
 from simon.word_levels import LABELS as LEVEL_LABELS
 from simon.word_levels import LEVELS
@@ -43,6 +44,16 @@ def _change_word_caption(state: AppState) -> str:
     if last is None:
         return "עדיין לא שיחקת"
     return f"בפעם הקודמת: שינית {last['changes_solved']} מילים"
+
+
+def _choice_caption(game: ChoiceGame):
+    def caption(state: AppState) -> str:
+        last = state.choice_progress[game.key].last_session()
+        if last is None:
+            return "עדיין לא שיחקת"
+        return f"בפעם הקודמת: {last['first_try_correct']} מתוך {last['answered']}"
+
+    return caption
 
 
 def _game_card(theme_key: str, title: str, subtitle: str, caption: str | None, on_click) -> ft.Container:
@@ -187,6 +198,13 @@ def build_home_view(page: ft.Page, state: AppState) -> ft.View:
         state.change_word_session = None  # let /change build a fresh session
         await page.push_route("/change")
 
+    def start_choice(game: ChoiceGame):
+        async def start(_: ft.ControlEvent) -> None:
+            state.choice_sessions[game.key] = None  # let the game build a fresh session
+            await page.push_route(game.route)
+
+        return start
+
     async def go_progress(_: ft.ControlEvent) -> None:
         await page.push_route("/progress")
 
@@ -254,6 +272,14 @@ def build_home_view(page: ft.Page, state: AppState) -> ft.View:
                         caption(_change_word_caption),
                         start_change_word,
                     ),
+                    *[
+                        control
+                        for game in CHOICE_GAMES.values()
+                        for control in (
+                            ft.Container(height=16),
+                            _game_card(game.theme_key, game.title, game.subtitle, caption(_choice_caption(game)), start_choice(game)),
+                        )
+                    ],
                     *footer,
                     ft.Container(height=16),
                     # The code is AGPL-3.0, which asks that users of the app

@@ -1,7 +1,11 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from simon.change_word_session import ChangeWordSession
 from simon.change_word_storage import ChangeWordProgressStore
+from simon.choice_bank import ChoiceItem
+from simon.choice_games import CHOICE_GAMES
+from simon.choice_session import ChoiceSession
+from simon.choice_storage import ChoiceProgressStore
 from simon.engagement_storage import EngagementStore
 from simon.kv_store import InMemoryKeyValueStore, KeyValueStore, NamespacedKeyValueStore, get_default_store
 from simon.memory_session import MemoryGameSession
@@ -22,6 +26,8 @@ class AppState:
     scramble_categories: dict[str, dict]
     # word level (see word_levels) -> that level's riddle pairs
     change_word_pairs: dict[str, list[list[dict]]]
+    # choice game key (see choice_games) -> word level -> its questions
+    choice_items: dict[str, dict[str, list[ChoiceItem]]] = field(default_factory=dict)
 
     # None until a profile is chosen on the picker screen -- main.py's
     # routing gates every other screen on `profile` being set, so by the
@@ -37,12 +43,15 @@ class AppState:
     change_word_progress: ChangeWordProgressStore | None = None
     engagement: EngagementStore | None = None
     settings: SettingsStore | None = None
+    # choice game key -> its own progress store
+    choice_progress: dict[str, ChoiceProgressStore] = field(default_factory=dict)
 
     session: SimonSession | None = None
     memory_session: MemoryGameSession | None = None
     subword_session: SubWordSession | None = None
     scramble_session: ScrambleSession | None = None
     change_word_session: ChangeWordSession | None = None
+    choice_sessions: dict[str, ChoiceSession | None] = field(default_factory=dict)
 
     def activate_profile(self, profile: str) -> None:
         """Gives this profile its own namespaced view of the storage
@@ -69,6 +78,7 @@ class AppState:
         self.change_word_progress = ChangeWordProgressStore(store=store)
         self.engagement = EngagementStore(store=store)
         self.settings = SettingsStore(store=store)
+        self.choice_progress = {key: ChoiceProgressStore(key, store=store) for key in CHOICE_GAMES}
 
     @property
     def word_level(self) -> str:
