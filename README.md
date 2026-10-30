@@ -9,6 +9,9 @@ word finding, memory and reaction time:
 - **בניית מילים** – find words hidden inside a word
 - **מילים מבולגנות** – unscramble letters into a word, by topic
 - **שינוי מילים** – rearrange one word's letters into a new word, from two clues
+- **מילה נרדפת** – pick the word that means the same, out of four
+- **הפכים** – pick the opposite word (חם → קר), out of four
+- **מה המילה?** – pick the word that matches a definition, out of four
 
 The word games have a regular and an advanced level. The app runs in the
 browser (phone or computer) as a family app with saved progress per person,
@@ -115,7 +118,10 @@ deterministically from a real Hebrew dictionary:
   definition. The original definition is stored with each word
   (`"definition"` in the riddle-pair files, `scramble_sources.json` for
   topic words). Some clues are adapted from these definitions, so the app
-  credits ויקימילון on its home screen.
+  credits ויקימילון on its home screen. The synonym and opposite games'
+  pairs (`synonyms.json`, `opposites.json`) are only pairs ויקימילון
+  itself lists as מילים נרדפות / ניגודים, and every other word it relates
+  to either word is kept out of the wrong options.
 - **FrequencyWords** (OpenSubtitles Hebrew list): how common a word is,
   which sets its level (regular vs. advanced).
 
@@ -126,6 +132,8 @@ python scripts/find_word_candidates.py           # candidate reports
 python scripts/find_word_candidates.py --check   # bank words the dictionary doesn't confirm
 python scripts/import_dictionary_pairs.py FILE        # add riddle pairs (validated)
 python scripts/import_dictionary_topic_words.py FILE  # add topic words (validated)
+python scripts/find_word_candidates.py --relations    # synonym/opposite candidates
+python scripts/import_dictionary_relations.py FILE    # add synonym/opposite pairs (validated)
 ```
 
 ## License
