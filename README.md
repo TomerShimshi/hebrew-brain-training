@@ -101,23 +101,20 @@ It gets a token for a restricted Redis user that can only add to
 
 1. In the Upstash console, open the database's **CLI** tab and run:
    ```
-   ACL GENTOKEN
+   ACL GENTOKEN usage_counter
    ```
-   It prints a long random password -- call it `PASSWORD` below.
-2. Create the restricted user (replace `PASSWORD`):
+   It prints a long token -- call it `TOKEN` below. It is both the new
+   user's password and its REST token.
+2. Create the restricted user (replace `TOKEN`, keeping the `>` before it):
    ```
-   ACL SETUSER usage_counter on >PASSWORD resetkeys ~usage:* resetchannels -@all +hincrby
+   ACL SETUSER usage_counter on >TOKEN resetkeys ~usage:* resetchannels -@all +hincrby
    ```
-3. Get its REST token:
-   ```
-   ACL RESTTOKEN usage_counter PASSWORD
-   ```
-4. In Render, on **`simon-public` only**, add `USAGE_REDIS_REST_URL` (the
+3. In Render, on **`simon-public` only**, add `USAGE_REDIS_REST_URL` (the
    same URL as the family `UPSTASH_REDIS_REST_URL`) and
-   `USAGE_REDIS_REST_TOKEN` (the token from step 3). Never give
+   `USAGE_REDIS_REST_TOKEN` (the `TOKEN` from step 1). Never give
    `simon-public` the `UPSTASH_REDIS_REST_*` (family) variables. The
    `simon` service needs nothing new: it reads the counts with its own keys.
-5. Redeploy `simon-public`.
+4. Redeploy `simon-public`.
 
 Without these variables nothing is counted and the page says so.
 
