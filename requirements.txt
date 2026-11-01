@@ -1,3 +1,7 @@
 flet==0.86.5
 flet-audio==0.86.5
 flet-web==0.86.5
+# flet-web 0.86.5 passes FastAPI's removed `openapi_prefix` argument, so a
+# newer FastAPI crashes the web app at startup -- keep the versions it works with
+fastapi==0.115.14
+starlette==0.46.2
