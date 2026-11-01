@@ -89,10 +89,13 @@ Upstash account at all.
 
 ### Public app usage counts (optional)
 
-The public app can keep anonymous daily totals -- visits, visits that
-actually started a game, and how often each game was started -- with no
-names, addresses or cookies (see `src/simon/usage_stats.py`). The family
-app shows them under **ההתקדמות שלי → שימוש באפליקציה הציבורית**.
+The public app can keep anonymous totals -- visits, different visitors
+and how often they come back, visits that actually started a game, and how
+often each game was started -- with no names, addresses or IDs (see
+`src/simon/usage_stats.py`). To tell visitors apart, each browser keeps
+only the date it was last counted and on how many days it has visited, and
+once a day adds one to the count for that day of visiting. The family app
+shows them under **ההתקדמות שלי → שימוש באפליקציה הציבורית**.
 
 The counts live in the family's Upstash database (Upstash's free plan
 allows one database), but the public service never gets the family keys.

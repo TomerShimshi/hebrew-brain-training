@@ -31,6 +31,7 @@ from simon.screens.usage_view import build_usage_view
 from simon.scramble_bank import load_categories
 from simon.subword_bank import load_bank, load_clues
 from simon.ui_helpers import BACKGROUND
+from simon.usage_stats import record_visitor
 from simon.user_profile import profile_from_route, route_path
 
 ROUTE_BUILDERS = {
@@ -100,6 +101,8 @@ def main(page: ft.Page) -> None:
                 # no profiles in the public app: every visitor is an
                 # anonymous guest whose play is never saved
                 state.activate_guest()
+                if state.usage:
+                    page.run_task(record_visitor, state.usage, page.shared_preferences)
             else:
                 requested = profile_from_route(page.route)
                 if requested:

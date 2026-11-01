@@ -1,10 +1,11 @@
 """The public app's anonymous usage counter: daily totals only, in its own
 database -- never the family's -- and never able to break a game."""
 
+import asyncio
 import json
 import sys
 import types
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -15,7 +16,17 @@ import main  # noqa: E402
 import simon.kv_store as kv_store  # noqa: E402
 import simon.usage_stats as usage_stats  # noqa: E402
 from simon.app_state import AppState  # noqa: E402
-from simon.usage_stats import PLAYED, VISIT, UsageStats, game_event, get_usage_stats  # noqa: E402
+from simon.usage_stats import (  # noqa: E402
+    PLAYED,
+    VISIT,
+    UsageStats,
+    game_event,
+    get_usage_stats,
+    record_visitor,
+    visitor_day,
+    visitor_day_event,
+    visitor_days,
+)
 
 USAGE_URL = "https://usage.upstash.io"
 FAMILY_URL = "https://family.upstash.io"
@@ -144,15 +155,41 @@ def test_family_app_counts_nothing(monkeypatch, requests, configured):
     assert requests == []
 
 
+class FakePrefs:
+    """The browser's local storage."""
+
+    def __init__(self, values: dict | None = None) -> None:
+        self.values = dict(values or {})
+
+    async def get(self, key):
+        return self.values.get(key)
+
+    async def set(self, key, value) -> bool:
+        self.values[key] = value
+        return True
+
+
+class BrokenPrefs:
+    async def get(self, key):
+        raise RuntimeError("no storage in this browser")
+
+    async def set(self, key, value):
+        raise RuntimeError("no storage in this browser")
+
+
 class FakePage:
     def __init__(self, route: str) -> None:
         self.route = route
         self.views: list = []
         self.window = types.SimpleNamespace(width=None, height=None)
         self.width = 390
+        self.shared_preferences = FakePrefs()
 
     def update(self) -> None:
         pass
+
+    def run_task(self, handler, *args):
+        asyncio.run(handler(*args))
 
 
 def test_opening_a_game_route_counts_it(public_env, requests, configured, monkeypatch):
@@ -160,7 +197,9 @@ def test_opening_a_game_route_counts_it(public_env, requests, configured, monkey
     page = FakePage("/definition")
     main.main(page)
     events = [body[2] for _url, body in requests]
-    assert events == [VISIT, game_event("definition"), PLAYED]
+    assert events[0] == VISIT
+    assert sorted(events[1:3]) == [visitor_day_event(1)] * 2  # the day's and the all-time count
+    assert events[3:] == [game_event("definition"), PLAYED]
 
 
 def test_usage_page_is_family_only(public_env, requests):
@@ -169,6 +208,76 @@ def test_usage_page_is_family_only(public_env, requests):
     assert page.views[0].route == "/"
 
 
+DAY = date(2026, 11, 1)
+
+
+def test_visitor_day_counts_each_day_of_visiting_once():
+    assert visitor_day(None, None, DAY) == 1
+    assert visitor_day((DAY - timedelta(days=3)).isoformat(), 4, DAY) == 5
+    assert visitor_day(DAY.isoformat(), 4, DAY) is None  # already counted today
+
+
+def test_a_browser_counts_its_days_of_visiting_in_the_day_and_all_time(requests):
+    stats, prefs = UsageStats(USAGE_URL, "t"), FakePrefs()
+    asyncio.run(record_visitor(stats, prefs, day=DAY))
+    asyncio.run(record_visitor(stats, prefs, day=DAY))  # refresh, new tab, reconnect
+    asyncio.run(record_visitor(stats, prefs, day=DAY + timedelta(days=5)))
+    assert [(body[1], body[2]) for _url, body in requests] == [
+        ("usage:2026-11-01", "visitor:day:1"),
+        ("usage:all", "visitor:day:1"),
+        ("usage:2026-11-06", "visitor:day:2"),
+        ("usage:all", "visitor:day:2"),
+    ]
+
+
+def test_the_browser_keeps_only_a_date_and_a_count(requests):
+    prefs = FakePrefs()
+    asyncio.run(record_visitor(UsageStats(USAGE_URL, "t"), prefs, day=DAY))
+    assert sorted(prefs.values.values(), key=str) == [1, "2026-11-01"]
+
+
+def test_no_browser_storage_never_raises(requests):
+    asyncio.run(record_visitor(UsageStats(USAGE_URL, "t"), BrokenPrefs(), day=DAY))
+    assert requests == []
+
+
+def test_visitor_days_reads_the_counts():
+    assert visitor_days({VISIT: 3, "visitor:day:1": 2, "visitor:day:12": 1}) == {1: 2, 12: 1}
+
+
+def test_all_time_totals(monkeypatch):
+    def urlopen(req, timeout=None):
+        assert json.loads(req.data) == ["HGETALL", "usage:all"]
+        return FakeResponse({"result": ["visitor:day:1", "7", "visitor:day:2", "3"]})
+
+    monkeypatch.setattr(usage_stats.urllib.request, "urlopen", urlopen)
+    assert UsageStats(USAGE_URL, "t").totals() == {"visitor:day:1": 7, "visitor:day:2": 3}
+
+
 @pytest.fixture
 def public_env(monkeypatch):
     monkeypatch.setenv("APP_MODE", "public")
+
+
+def _texts(control) -> list[str]:
+    found = [control.value] if isinstance(getattr(control, "value", None), str) else []
+    for attr in ("content", "controls"):
+        child = getattr(control, attr, None)
+        for c in child if isinstance(child, list) else [child] if child is not None else []:
+            found += _texts(c)
+    return found
+
+
+def test_usage_page_shows_how_often_visitors_come():
+    from simon.screens.usage_view import _report
+
+    days = [
+        (DAY, {VISIT: 9, PLAYED: 6, "visitor:day:1": 3, "visitor:day:3": 1, "visitor:day:7": 2}),
+        (DAY - timedelta(days=1), {VISIT: 4, "visitor:day:1": 2}),
+    ]
+    totals = {"visitor:day:1": 40, "visitor:day:2": 15, "visitor:day:5": 6, "visitor:day:10": 2}
+    texts = [t for control in _report(days, totals) for t in _texts(control)]
+    assert "מבקרים מאז ההתחלה: 40" in texts
+    assert {"באו לפחות 2 ימים: 15", "באו לפחות 5 ימים: 6", "באו לפחות 10 ימים: 2"} <= set(texts)
+    assert "חדשים 5 · מזדמנים 1 · קבועים 2" in texts
+    assert "1.11 · 9 ביקורים · 6 מבקרים · 6 שיחקו" in texts
