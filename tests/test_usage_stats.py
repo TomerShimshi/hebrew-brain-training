@@ -17,15 +17,15 @@ import simon.kv_store as kv_store  # noqa: E402
 import simon.usage_stats as usage_stats  # noqa: E402
 from simon.app_state import AppState  # noqa: E402
 from simon.usage_stats import (  # noqa: E402
-    NEW_VISITOR,
     PLAYED,
-    RETURNING_VISITOR,
     VISIT,
     UsageStats,
     game_event,
     get_usage_stats,
     record_visitor,
-    visitor_event,
+    visitor_day,
+    visitor_day_event,
+    visitor_days,
 )
 
 USAGE_URL = "https://usage.upstash.io"
@@ -197,7 +197,9 @@ def test_opening_a_game_route_counts_it(public_env, requests, configured, monkey
     page = FakePage("/definition")
     main.main(page)
     events = [body[2] for _url, body in requests]
-    assert events == [VISIT, NEW_VISITOR, game_event("definition"), PLAYED]
+    assert events[0] == VISIT
+    assert sorted(events[1:3]) == [visitor_day_event(1)] * 2  # the day's and the all-time count
+    assert events[3:] == [game_event("definition"), PLAYED]
 
 
 def test_usage_page_is_family_only(public_env, requests):
@@ -209,32 +211,47 @@ def test_usage_page_is_family_only(public_env, requests):
 DAY = date(2026, 11, 1)
 
 
-def test_visitor_event_new_returning_or_already_counted_today():
-    assert visitor_event(None, DAY) == NEW_VISITOR
-    assert visitor_event((DAY - timedelta(days=3)).isoformat(), DAY) == RETURNING_VISITOR
-    assert visitor_event(DAY.isoformat(), DAY) is None
+def test_visitor_day_counts_each_day_of_visiting_once():
+    assert visitor_day(None, None, DAY) == 1
+    assert visitor_day((DAY - timedelta(days=3)).isoformat(), 4, DAY) == 5
+    assert visitor_day(DAY.isoformat(), 4, DAY) is None  # already counted today
 
 
-def test_a_browser_is_counted_once_a_day_new_then_returning(requests):
+def test_a_browser_counts_its_days_of_visiting_in_the_day_and_all_time(requests):
     stats, prefs = UsageStats(USAGE_URL, "t"), FakePrefs()
     asyncio.run(record_visitor(stats, prefs, day=DAY))
     asyncio.run(record_visitor(stats, prefs, day=DAY))  # refresh, new tab, reconnect
-    asyncio.run(record_visitor(stats, prefs, day=DAY + timedelta(days=1)))
+    asyncio.run(record_visitor(stats, prefs, day=DAY + timedelta(days=5)))
     assert [(body[1], body[2]) for _url, body in requests] == [
-        ("usage:2026-11-01", NEW_VISITOR),
-        ("usage:2026-11-02", RETURNING_VISITOR),
+        ("usage:2026-11-01", "visitor:day:1"),
+        ("usage:all", "visitor:day:1"),
+        ("usage:2026-11-06", "visitor:day:2"),
+        ("usage:all", "visitor:day:2"),
     ]
 
 
-def test_the_browser_keeps_only_a_date(requests):
+def test_the_browser_keeps_only_a_date_and_a_count(requests):
     prefs = FakePrefs()
     asyncio.run(record_visitor(UsageStats(USAGE_URL, "t"), prefs, day=DAY))
-    assert list(prefs.values.values()) == ["2026-11-01"]
+    assert sorted(prefs.values.values(), key=str) == [1, "2026-11-01"]
 
 
 def test_no_browser_storage_never_raises(requests):
     asyncio.run(record_visitor(UsageStats(USAGE_URL, "t"), BrokenPrefs(), day=DAY))
     assert requests == []
+
+
+def test_visitor_days_reads_the_counts():
+    assert visitor_days({VISIT: 3, "visitor:day:1": 2, "visitor:day:12": 1}) == {1: 2, 12: 1}
+
+
+def test_all_time_totals(monkeypatch):
+    def urlopen(req, timeout=None):
+        assert json.loads(req.data) == ["HGETALL", "usage:all"]
+        return FakeResponse({"result": ["visitor:day:1", "7", "visitor:day:2", "3"]})
+
+    monkeypatch.setattr(usage_stats.urllib.request, "urlopen", urlopen)
+    assert UsageStats(USAGE_URL, "t").totals() == {"visitor:day:1": 7, "visitor:day:2": 3}
 
 
 @pytest.fixture
@@ -251,13 +268,16 @@ def _texts(control) -> list[str]:
     return found
 
 
-def test_usage_page_shows_different_visitors_new_and_returning():
+def test_usage_page_shows_how_often_visitors_come():
     from simon.screens.usage_view import _report
 
     days = [
-        (DAY, {VISIT: 9, PLAYED: 6, NEW_VISITOR: 3, RETURNING_VISITOR: 2}),
-        (DAY - timedelta(days=1), {VISIT: 4, NEW_VISITOR: 2}),
+        (DAY, {VISIT: 9, PLAYED: 6, "visitor:day:1": 3, "visitor:day:3": 1, "visitor:day:7": 2}),
+        (DAY - timedelta(days=1), {VISIT: 4, "visitor:day:1": 2}),
     ]
-    texts = [t for control in _report(days) for t in _texts(control)]
-    assert "מבקרים שונים: 7 (חדשים 5 · חוזרים 2)" in texts
-    assert "1.11 · 9 ביקורים · 5 מבקרים · 6 שיחקו" in texts
+    totals = {"visitor:day:1": 40, "visitor:day:2": 15, "visitor:day:5": 6, "visitor:day:10": 2}
+    texts = [t for control in _report(days, totals) for t in _texts(control)]
+    assert "מבקרים מאז ההתחלה: 40" in texts
+    assert {"באו לפחות 2 ימים: 15", "באו לפחות 5 ימים: 6", "באו לפחות 10 ימים: 2"} <= set(texts)
+    assert "חדשים 5 · מזדמנים 1 · קבועים 2" in texts
+    assert "1.11 · 9 ביקורים · 6 מבקרים · 6 שיחקו" in texts
