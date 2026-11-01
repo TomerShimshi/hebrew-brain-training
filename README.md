@@ -94,15 +94,30 @@ actually started a game, and how often each game was started -- with no
 names, addresses or cookies (see `src/simon/usage_stats.py`). The family
 app shows them under **ההתקדמות שלי → שימוש באפליקציה הציבורית**.
 
-The counts live in their **own** Upstash database, never the family one:
+The counts live in the family's Upstash database (Upstash's free plan
+allows one database), but the public service never gets the family keys.
+It gets a token for a restricted Redis user that can only add to
+`usage:*` counters -- not read or change anything else:
 
-1. In Upstash, create a second free Redis database (e.g. `usage`) and copy
-   its REST URL and token.
-2. In Render, add them as `USAGE_REDIS_REST_URL` and
-   `USAGE_REDIS_REST_TOKEN` to **both** services: `simon-public` counts,
-   `simon` shows the page. Never give `simon-public` the
-   `UPSTASH_REDIS_REST_*` (family) variables.
-3. Redeploy both services.
+1. In the Upstash console, open the database's **CLI** tab and run:
+   ```
+   ACL GENTOKEN
+   ```
+   It prints a long random password -- call it `PASSWORD` below.
+2. Create the restricted user (replace `PASSWORD`):
+   ```
+   ACL SETUSER usage_counter on >PASSWORD resetkeys ~usage:* resetchannels -@all +hincrby
+   ```
+3. Get its REST token:
+   ```
+   ACL RESTTOKEN usage_counter PASSWORD
+   ```
+4. In Render, on **`simon-public` only**, add `USAGE_REDIS_REST_URL` (the
+   same URL as the family `UPSTASH_REDIS_REST_URL`) and
+   `USAGE_REDIS_REST_TOKEN` (the token from step 3). Never give
+   `simon-public` the `UPSTASH_REDIS_REST_*` (family) variables. The
+   `simon` service needs nothing new: it reads the counts with its own keys.
+5. Redeploy `simon-public`.
 
 Without these variables nothing is counted and the page says so.
 

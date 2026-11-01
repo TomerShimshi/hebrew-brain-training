@@ -71,6 +71,23 @@ def test_not_configured_means_no_counter(monkeypatch):
     assert get_usage_stats() is None
 
 
+def test_family_app_reads_counts_with_its_own_database_keys(monkeypatch):
+    monkeypatch.delenv("APP_MODE", raising=False)
+    monkeypatch.delenv("USAGE_REDIS_REST_URL", raising=False)
+    monkeypatch.delenv("USAGE_REDIS_REST_TOKEN", raising=False)
+    monkeypatch.setenv("UPSTASH_REDIS_REST_URL", FAMILY_URL)
+    monkeypatch.setenv("UPSTASH_REDIS_REST_TOKEN", "family-secret")
+    assert get_usage_stats()._url == FAMILY_URL
+
+
+def test_public_app_never_falls_back_to_the_family_keys(public_env, monkeypatch):
+    monkeypatch.delenv("USAGE_REDIS_REST_URL", raising=False)
+    monkeypatch.delenv("USAGE_REDIS_REST_TOKEN", raising=False)
+    monkeypatch.setenv("UPSTASH_REDIS_REST_URL", FAMILY_URL)
+    monkeypatch.setenv("UPSTASH_REDIS_REST_TOKEN", "family-secret")
+    assert get_usage_stats() is None
+
+
 def test_a_failing_counter_never_raises(monkeypatch):
     def broken(*_args, **_kwargs):
         raise OSError("network down")

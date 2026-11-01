@@ -3,11 +3,12 @@ many of them actually played (bots and link previews open the page but
 never start a game), and how often each game is started -- daily totals
 only, with nothing about who visited (no names, addresses or cookies).
 
-The counts live in their own Upstash database (USAGE_REDIS_REST_URL /
-USAGE_REDIS_REST_TOKEN), never the family's: the public service may get
-these keys, never the family ones. The only thing the public app does with
-it is add one to a counter. The family app reads the counts for its usage
-page (screens/usage_view.py).
+The counts are `usage:<day>` hashes in the family's Upstash database, but
+the public service never gets the family keys: it gets
+USAGE_REDIS_REST_URL / USAGE_REDIS_REST_TOKEN, a token for a restricted
+Redis user that may only add to `usage:*` counters (HINCRBY) -- it can't
+read or change anything else (see README). The family app reads the counts
+with its own keys for its usage page (screens/usage_view.py).
 
 Counting is best-effort and runs in the background -- a slow or broken
 counter must never delay or break a game.
@@ -20,6 +21,7 @@ import threading
 import urllib.request
 from datetime import date, datetime, timedelta, timezone
 
+from simon.app_mode import is_public_mode
 from simon.kv_store import REQUEST_TIMEOUT_S, _clean_env
 
 VISIT = "visit"
@@ -99,8 +101,16 @@ class UsageStats:
 
 
 def get_usage_stats() -> UsageStats | None:
-    """The counter, or None when its database isn't configured (e.g. local
-    development) -- then nothing is counted."""
+    """The counter, or None when it isn't configured (e.g. local
+    development) -- then nothing is counted.
+
+    The public app uses USAGE_REDIS_REST_URL / _TOKEN: a token limited to
+    adding to `usage:*` counters (see README). The family app, which only
+    reads the counts, may fall back to its own database keys -- the public
+    app never does, so it can't reach the family's data."""
     url = _clean_env(os.environ.get("USAGE_REDIS_REST_URL"))
     token = _clean_env(os.environ.get("USAGE_REDIS_REST_TOKEN"))
+    if not (url and token) and not is_public_mode():
+        url = _clean_env(os.environ.get("UPSTASH_REDIS_REST_URL"))
+        token = _clean_env(os.environ.get("UPSTASH_REDIS_REST_TOKEN"))
     return UsageStats(url, token) if url and token else None
