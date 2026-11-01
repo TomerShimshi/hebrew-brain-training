@@ -1,12 +1,13 @@
 """The family app's view of the public app's anonymous usage counts (see
-usage_stats): visits, visits that actually played, and games started."""
+usage_stats): visits, different visitors (new / returning), visits that
+actually played, and games started."""
 
 import flet as ft
 
 from simon.app_state import AppState
 from simon.choice_games import CHOICE_GAMES
 from simon.ui_helpers import ACCENT, GAME_THEMES, TEXT_SECONDARY, bar_chart, chip_button, rtl_text, soft_shadow
-from simon.usage_stats import PLAYED, VISIT, game_counts, get_usage_stats
+from simon.usage_stats import NEW_VISITOR, PLAYED, RETURNING_VISITOR, VISIT, game_counts, get_usage_stats
 
 DAYS = 30
 CHART_DAYS = 14
@@ -36,8 +37,14 @@ def _card(title: str, body: list[ft.Control]) -> ft.Container:
     )
 
 
+def _visitors(counts: dict[str, int]) -> int:
+    return counts.get(NEW_VISITOR, 0) + counts.get(RETURNING_VISITOR, 0)
+
+
 def _report(days: list) -> list[ft.Control]:
     visits = sum(c.get(VISIT, 0) for _d, c in days)
+    new = sum(c.get(NEW_VISITOR, 0) for _d, c in days)
+    returning = sum(c.get(RETURNING_VISITOR, 0) for _d, c in days)
     played = sum(c.get(PLAYED, 0) for _d, c in days)
     games: dict[str, int] = {}
     for _day, counts in days:
@@ -49,6 +56,8 @@ def _report(days: list) -> list[ft.Control]:
         f"{DAYS} הימים האחרונים",
         [
             rtl_text(f"ביקורים: {visits}", size=18),
+            rtl_text(f"מבקרים שונים: {new + returning} (חדשים {new} · חוזרים {returning})", size=18),
+            rtl_text("כל מכשיר נספר פעם אחת ביום", size=12, color=TEXT_SECONDARY),
             rtl_text(f"ביקורים ששיחקו: {played}", size=18, weight=ft.FontWeight.W_600, color=ACCENT),
             ft.Container(height=10),
             bar_chart(recent, ACCENT, bar_width=14) if any(recent) else ft.Container(),
@@ -63,7 +72,10 @@ def _report(days: list) -> list[ft.Control]:
     ]
     games_card = _card("משחקים שהתחילו", game_rows or [rtl_text("עדיין אין", size=15, color=TEXT_SECONDARY)])
     day_rows = [
-        rtl_text(f"{day.day}.{day.month} · {c.get(VISIT, 0)} ביקורים · {c.get(PLAYED, 0)} שיחקו", size=15)
+        rtl_text(
+            f"{day.day}.{day.month} · {c.get(VISIT, 0)} ביקורים · {_visitors(c)} מבקרים · {c.get(PLAYED, 0)} שיחקו",
+            size=15,
+        )
         for day, c in days
         if c.get(VISIT, 0) or c.get(PLAYED, 0)
     ]

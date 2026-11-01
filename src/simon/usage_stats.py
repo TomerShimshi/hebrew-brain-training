@@ -1,7 +1,12 @@
 """Anonymous usage counts for the public app: how many visits it gets, how
 many of them actually played (bots and link previews open the page but
-never start a game), and how often each game is started -- daily totals
-only, with nothing about who visited (no names, addresses or cookies).
+never start a game), how many different browsers visited -- new or
+returning -- and how often each game is started. Daily totals only, with
+nothing about who visited (no names, addresses or IDs).
+
+Different visitors are counted without any ID: the browser keeps just the
+date it was last counted (record_visitor), and counts itself once a day --
+as returning if it has visited before.
 
 The counts are `usage:<day>` hashes in the family's Upstash database, but
 the public service never gets the family keys: it gets
@@ -26,6 +31,10 @@ from simon.kv_store import REQUEST_TIMEOUT_S, _clean_env
 
 VISIT = "visit"
 PLAYED = "played"
+NEW_VISITOR = "visitor:new"
+RETURNING_VISITOR = "visitor:returning"
+# the browser's local storage: the last day this browser was counted
+LAST_COUNTED_KEY = "usage_last_counted"
 _GAME_PREFIX = "game:"
 _KEY_PREFIX = "usage:"
 
@@ -98,6 +107,30 @@ class UsageStats:
             flat = result.get("result") or []
             counts.append((day, {flat[i]: int(flat[i + 1]) for i in range(0, len(flat), 2)}))
         return counts
+
+
+def visitor_event(last_counted: str | None, day: date) -> str | None:
+    """How to count a browser that was last counted on `last_counted`
+    (None: never) -- or None if it was already counted `day`."""
+    if last_counted == day.isoformat():
+        return None
+    return RETURNING_VISITOR if last_counted else NEW_VISITOR
+
+
+async def record_visitor(stats: UsageStats, prefs, day: date | None = None) -> None:
+    """Counts this browser once a day, new or returning, using only the
+    date it keeps in its local storage (`prefs`, Flet's shared_preferences)."""
+    day = day or today()
+    try:
+        last = await prefs.get(LAST_COUNTED_KEY)
+        event = visitor_event(last if isinstance(last, str) else None, day)
+        if event is None:
+            return
+        await prefs.set(LAST_COUNTED_KEY, day.isoformat())
+    except Exception as e:  # no local storage (e.g. blocked): just skip it
+        _log(f"record_visitor failed: {type(e).__name__}: {e}")
+        return
+    stats.record(event, day)
 
 
 def get_usage_stats() -> UsageStats | None:
