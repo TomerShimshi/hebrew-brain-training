@@ -17,6 +17,7 @@ from simon.settings_storage import SettingsStore
 from simon.storage import ProgressStore
 from simon.subword_session import SubWordSession
 from simon.subword_storage import SubWordProgressStore
+from simon.usage_stats import PLAYED, VISIT, UsageStats, game_event, get_usage_stats
 
 
 @dataclass
@@ -53,6 +54,11 @@ class AppState:
     change_word_session: ChangeWordSession | None = None
     choice_sessions: dict[str, ChoiceSession | None] = field(default_factory=dict)
 
+    # the public app's anonymous daily counts (see usage_stats); None in the
+    # family app, or when the counter isn't configured
+    usage: UsageStats | None = None
+    _played_counted: bool = False
+
     def activate_profile(self, profile: str) -> None:
         """Gives this profile its own namespaced view of the storage
         backend, so e.g. "efraim" and "tomer" never see each other's
@@ -69,6 +75,19 @@ class AppState:
         self.public = True
         self.profile = "guest"
         self._attach_stores(InMemoryKeyValueStore())
+        self.usage = get_usage_stats()
+        if self.usage:
+            self.usage.record(VISIT)
+
+    def record_game_started(self, game_key: str) -> None:
+        """Counts a game start in the public app's daily totals -- and, the
+        first time in this visit, the visit as one that actually played."""
+        if not self.public or self.usage is None:
+            return
+        self.usage.record(game_event(game_key))
+        if not self._played_counted:
+            self._played_counted = True
+            self.usage.record(PLAYED)
 
     def _attach_stores(self, store: KeyValueStore) -> None:
         self.progress = ProgressStore(store=store)

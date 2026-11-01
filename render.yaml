@@ -1,6 +1,7 @@
 services:
   # The family app: per-profile progress saved to Upstash. Its
-  # UPSTASH_REDIS_REST_URL / _TOKEN are set in the Render dashboard.
+  # UPSTASH_REDIS_REST_URL / _TOKEN are set in the Render dashboard, as are
+  # USAGE_REDIS_REST_URL / _TOKEN (to show the public app's usage counts).
   - type: web
     name: simon
     runtime: python
@@ -11,7 +12,9 @@ services:
   # The public app: the same games for anyone, with nothing saved (see
   # src/simon/app_mode.py). Never give this service the Upstash variables --
   # it has no business near the family's data (and the code refuses to use
-  # persistent storage in public mode anyway).
+  # persistent storage in public mode anyway). It may get
+  # USAGE_REDIS_REST_URL / _TOKEN -- a separate database holding only
+  # anonymous daily counts (see src/simon/usage_stats.py).
   - type: web
     name: simon-public
     runtime: python

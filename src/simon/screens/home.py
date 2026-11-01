@@ -213,7 +213,7 @@ def build_home_view(page: ft.Page, state: AppState) -> ft.View:
         return None if state.public else last_time(state)
 
     if state.public:
-        top_card = rtl_text("ללא הרשמה · שום מידע לא נשמר", size=14, color=TEXT_SECONDARY)
+        top_card = rtl_text("ללא הרשמה · שום מידע אישי לא נשמר", size=14, color=TEXT_SECONDARY)
         footer: list[ft.Control] = []
     else:
         top_card = _engagement_banner(state)

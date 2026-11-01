@@ -87,6 +87,25 @@ Without these two environment variables set, the app falls back to local
 JSON files automatically -- so `python main.py` and local testing need no
 Upstash account at all.
 
+### Public app usage counts (optional)
+
+The public app can keep anonymous daily totals -- visits, visits that
+actually started a game, and how often each game was started -- with no
+names, addresses or cookies (see `src/simon/usage_stats.py`). The family
+app shows them under **ההתקדמות שלי → שימוש באפליקציה הציבורית**.
+
+The counts live in their **own** Upstash database, never the family one:
+
+1. In Upstash, create a second free Redis database (e.g. `usage`) and copy
+   its REST URL and token.
+2. In Render, add them as `USAGE_REDIS_REST_URL` and
+   `USAGE_REDIS_REST_TOKEN` to **both** services: `simon-public` counts,
+   `simon` shows the page. Never give `simon-public` the
+   `UPSTASH_REDIS_REST_*` (family) variables.
+3. Redeploy both services.
+
+Without these variables nothing is counted and the page says so.
+
 ## Build the Android App Bundle (.aab)
 
 Requires Docker. First time only, generate a signing keystore (keep it

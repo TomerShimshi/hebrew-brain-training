@@ -6,7 +6,9 @@ The same code is deployed twice (see render.yaml):
   database, streaks, records and the progress screen;
 - the public app (APP_MODE=public): the games only, for anyone. Nothing is
   saved anywhere -- each visit gets its own throwaway in-memory storage --
-  and no profile names or history are ever shown.
+  and no profile names or history are ever shown. The only thing kept is
+  anonymous daily totals (visits, games started) in a separate database
+  of their own, never the family's (see usage_stats).
 
 The public service is also never given the Upstash credentials, and
 kv_store.get_default_store() refuses to run in public mode, so the public

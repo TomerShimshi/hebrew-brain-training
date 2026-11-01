@@ -79,6 +79,9 @@ def build_progress_view(page: ft.Page, state: AppState) -> ft.View:
     async def go_home(_: ft.ControlEvent) -> None:
         await page.push_route("/")
 
+    async def go_usage(_: ft.ControlEvent) -> None:
+        await page.push_route("/usage")
+
     return ft.View(
         route="/progress",
         controls=[
@@ -151,6 +154,8 @@ def build_progress_view(page: ft.Page, state: AppState) -> ft.View:
                             ),
                         )
                     ],
+                    ft.Container(height=24),
+                    chip_button("👥 שימוש באפליקציה הציבורית", go_usage, ACCENT),
                     ft.Container(height=24),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,

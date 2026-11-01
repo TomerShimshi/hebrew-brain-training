@@ -27,6 +27,7 @@ from simon.screens.simon_game import build_simon_game_view
 from simon.screens.simon_summary import build_simon_summary_view
 from simon.screens.subword_game import build_subword_game_view
 from simon.screens.subword_summary import build_subword_summary_view
+from simon.screens.usage_view import build_usage_view
 from simon.scramble_bank import load_categories
 from simon.subword_bank import load_bank, load_clues
 from simon.ui_helpers import BACKGROUND
@@ -46,6 +47,7 @@ ROUTE_BUILDERS = {
     "/change": build_change_word_game_view,
     "/change/summary": build_change_word_summary_view,
     "/progress": build_progress_view,
+    "/usage": build_usage_view,
 }
 # the three multiple-choice games share their screens (see choice_games)
 for _game in CHOICE_GAMES.values():
@@ -56,7 +58,18 @@ for _game in CHOICE_GAMES.values():
 APP_TITLE = "Hebrew Brain Training"
 
 # Screens built on saved history -- not reachable in the public app.
-FAMILY_ONLY_ROUTES = {"/progress"}
+FAMILY_ONLY_ROUTES = {"/progress", "/usage"}
+
+# The route that starts each game -> its key in the public app's usage
+# counts (see usage_stats). Opening one counts as starting that game.
+GAME_START_ROUTES = {
+    "/simon": "simon",
+    "/memory": "memory",
+    "/subword": "subword",
+    "/scramble/play": "scramble",
+    "/change": "change_word",
+    **{game.route: game.key for game in CHOICE_GAMES.values()},
+}
 
 
 def main(page: ft.Page) -> None:
@@ -100,6 +113,8 @@ def main(page: ft.Page) -> None:
         if state.public and path in FAMILY_ONLY_ROUTES:
             path = "/"
         builder = ROUTE_BUILDERS.get(path, build_home_view)
+        if path in GAME_START_ROUTES:
+            state.record_game_started(GAME_START_ROUTES[path])
         page.views.append(builder(page, state))
         page.update()
 
